@@ -1,0 +1,61 @@
+Program -> MainClass
+FOLLOW(Program) = { $ }
+
+MainClass -> class id { public static void main ( String [] id ) { StatementList }}
+FOLLOW(MainClass) = { $ }
+
+StatementList -> Statement StatementList
+              -> epsilon
+FOLLOW(StatementList) = { "}" }
+
+Statement -> VarDecl
+          -> { StatementList }
+          -> if ( Exp ) Statement else Statement
+          -> while ( Exp ) Statement
+          -> System.out.println ( Exp ) ;
+          -> System.out.print ( Exp ) ;
+          -> LeftValue = Exp ;
+          -> return Exp ;
+FOLLOW(Statement) = { else, $, FIRST(Statement), FOLLOW(StatementList) }
+
+Exp -> ( Exp ) ExpTail
+    -> LeftValue ExpLength ExpTail
+    -> INTEGER_LITERAL ExpTail
+    -> STRING_LITERAL ExpTail
+    -> true ExpTail
+    -> false ExpTail
+    -> new PrimeType Index ExpTail
+FOLLOW(Exp) = { ), FIRST(ExpTail), FOLLOW(ExpTail) }
+
+ExpTail -> op Exp ExpTail
+        -> epsilon
+FOLLOW(ExpTail) = { FOLLOW(Exp) }
+
+ExpDecl -> = Exp
+        -> epsilon
+FOLLOW(ExpDecl) = { FIRST(ExpList), FOLLOW(ExpList) }
+
+ExpList -> , id ExpDec ExpList
+        -> epsilon
+ExpLength -> . length
+          -> epsilon
+
+VarDecl -> Type id ExpDecl ExpList ;
+
+
+PrimeType -> int
+          -> boolean
+          -> String
+TypeTail -> PrimeType TypeTail
+         -> [ ]
+         -> epsilon
+Type -> PrimeType TypeTail
+
+
+IndexTail -> [ Exp ] IndexTail
+          -> epsilon
+Index -> [ Exp ] IndexTail
+
+LeftValueTail -> [ Exp ] LeftValueTail
+              -> epsilon
+LeftValue -> id LeftValueTail
