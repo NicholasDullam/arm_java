@@ -347,7 +347,7 @@ void LeftValueTail() {
     }
     else if (peek(TOK_ASSIGN) || peek(TOK_DOT) || peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || 
         peek(TOK_GREAT) || peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
-        peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || pe`ek(TOK_DIV) || peek(TOK_CLOSEPAR)) return;
+        peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR)) return;
     else error();
 }
 
