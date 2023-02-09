@@ -22,7 +22,7 @@ static bool peek(int expected_token) {
 // print error and exit program
 static void error() {
     fprintf(stderr, "syntax error, abort\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 // peek the expected token, error if mistake and consume otherwise

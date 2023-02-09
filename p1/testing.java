@@ -3,7 +3,7 @@ class testing {
         /*
             testing this out
         */
-        int test = 0, test = "te\\"sting";
+        int test = 0, test = "te\"ting";
         if (test > (test)) int test = 0;
         else int test = 0;
         while (1 > test) System.out.println("Testing");

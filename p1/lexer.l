@@ -55,7 +55,7 @@ void syntax_error() {
 [a-zA-Z]+[a-zA-Z0-9_]*               { return TOK_ID; }                                  /* identifiers */
 
 [0-9]+                               { return LIT_INT; }                                 /* literals */
-"\""([a-zA-Z0-9_]|"\\\"")*"\""       { return LIT_STRING; } // needs adjustments to accomodate escape characters
+\"([^\\\n\r\"]|(\\.))*\"               { return LIT_STRING; }
 
 "."                                  { return TOK_DOT; }                                 /* other terminals */
 ","                                  { return TOK_COMMA; }
