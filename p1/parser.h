@@ -33,6 +33,7 @@ enum Token {
     KW_ELSE,
     KW_RETURN,
     KW_WHILE,
+    KW_LENGTH,
     KW_SYSPLN,
     KW_SYSP,
 
@@ -42,6 +43,7 @@ enum Token {
     LIT_STRING,
 
     TOK_DOT,                                                                    // other terminals
+    TOK_COMMA,
     TOK_SEMICOLON,
     TOK_OPENBRACE,
     TOK_CLOSEBRACE,
@@ -66,9 +68,14 @@ void Type();
 void StatementList();
 void Statement();
 void Exp();
+void ExpTail();
+void ExpList();
+void ExpPrefix();
+void ExpLength();
 void IndexTail();
 void Index();
 void LeftValueTail();
 void LeftValue();
+void Operator();
 
 #endif

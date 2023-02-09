@@ -1,3 +1,5 @@
+@TODO figure out why expression not accepting IDs
+
 Program -> MainClass
 FOLLOW(Program) = { $ }
 
@@ -16,46 +18,64 @@ Statement -> VarDecl
           -> System.out.print ( Exp ) ;
           -> LeftValue = Exp ;
           -> return Exp ;
-FOLLOW(Statement) = { else, $, FIRST(Statement), FOLLOW(StatementList) }
+FOLLOW(Statement) = { else, FIRST(StatementList), FOLLOW(StatementList) } = { int, boolean, String, "{", if, while, System.out.println,
+                                                System.out.print, id, return, "}" }
 
-Exp -> ( Exp ) ExpTail
-    -> LeftValue ExpLength ExpTail
-    -> INTEGER_LITERAL ExpTail
-    -> STRING_LITERAL ExpTail
-    -> true ExpTail
-    -> false ExpTail
-    -> new PrimeType Index ExpTail
-FOLLOW(Exp) = { ), FIRST(ExpTail), FOLLOW(ExpTail) }
+Exp -> ExpPrefix ExpTail
+FOLLOW(Exp) = { ), FOLLOW(ExpDecl) }
 
-ExpTail -> op Exp ExpTail
+ExpPrefix -> ( Exp )
+          -> LeftValue ExpLength
+          -> INTEGER_LITERAL
+          -> STRING_LITERAL
+          -> true
+          -> false
+          -> new PrimeType Index
+FOLLOW(ExpPrefix) = { FIRST(ExpTail), FOLLOW(ExpTail) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+
+ExpTail -> op ExpPrefix ExpTail
         -> epsilon
-FOLLOW(ExpTail) = { FOLLOW(Exp) }
+FOLLOW(ExpTail) = { ) }
 
 ExpDecl -> = Exp
         -> epsilon
-FOLLOW(ExpDecl) = { FIRST(ExpList), FOLLOW(ExpList) }
+FOLLOW(ExpDecl) = { FIRST(ExpList), FOLLOW(ExpList) } = { ",", ; }
 
 ExpList -> , id ExpDec ExpList
         -> epsilon
+FOLLOW(ExpList) = { ; }    
+
 ExpLength -> . length
           -> epsilon
+FOLLOW(ExpList) = { FOLLOW(ExpPrefix) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 
 VarDecl -> Type id ExpDecl ExpList ;
-
+FOLLOW(VarDecl) = { FOLLOW(Statement) } = { int, boolean, String, "{", if, while, System.out.println,
+                                                System.out.print, id, return, "}" }
 
 PrimeType -> int
           -> boolean
           -> String
+FOLLOW(PrimeType) = { FIRST(Index), FIRST(TypeTail) } = { [, int, boolean, String }
+
 TypeTail -> PrimeType TypeTail
          -> [ ]
          -> epsilon
-Type -> PrimeType TypeTail
+FOLLOW(TypeTail) = { FOLLOW(Type) } = { id }
 
+Type -> PrimeType TypeTail
+FOLLOW(Type) = { id }
 
 IndexTail -> [ Exp ] IndexTail
           -> epsilon
+FOLLOW(IndexTail) = { FOLLOW(Index) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+
 Index -> [ Exp ] IndexTail
+FOLLOW(Index) = { FOLLOW(ExpTail), FIRST(ExpTail) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 
 LeftValueTail -> [ Exp ] LeftValueTail
               -> epsilon
+FOLLOW(LeftValueTail) = { FOLLOW(LeftValue) } = { =, ., ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
+
 LeftValue -> id LeftValueTail
+FOLLOW(LeftValue) = { =, FIRST(ExpLength), FOLLOW(ExpLength) } = { =, ., ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 

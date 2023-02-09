@@ -15,12 +15,6 @@ void syntax_error() {
 
 %%
 
-
-    /* write regex to match all terminals */
-    /* a few example are given below */
-
-
-
 [ \t\r\n]*                           { }                                                 /* whitespace */
 
 "//".*                               { }                                                 /* inline comments */
@@ -54,15 +48,17 @@ void syntax_error() {
 "else"                               { return KW_ELSE; }
 "return"                             { return KW_RETURN; }
 "while"                              { return KW_WHILE; }
+"length"                             { return KW_LENGTH; }
 "System.out.println"                 { return KW_SYSPLN; }
 "System.out.print"                   { return KW_SYSP; }
 
-[a-zA-Z]*[a-zA-Z0-9_]*               { return TOK_ID; }                                  /* identifiers */
+[a-zA-Z]+[a-zA-Z0-9_]*               { return TOK_ID; }                                  /* identifiers */
 
-[0-9]*                               { return LIT_INT; }                                 /* literals */
+[0-9]+                               { return LIT_INT; }                                 /* literals */
 "\""([a-zA-Z0-9_]|"\\\"")*"\""       { return LIT_STRING; } // needs adjustments to accomodate escape characters
 
 "."                                  { return TOK_DOT; }                                 /* other terminals */
+","                                  { return TOK_COMMA; }
 ";"                                  { return TOK_SEMICOLON; }
 "{"                                  { return TOK_OPENBRACE; }
 "}"                                  { return TOK_CLOSEBRACE; }
