@@ -22,7 +22,7 @@ FOLLOW(Statement) = { else, FIRST(StatementList), FOLLOW(StatementList) } = { in
                                                 System.out.print, id, return, "}" }
 
 Exp -> ExpPrefix ExpTail
-FOLLOW(Exp) = { ), FOLLOW(ExpDecl) }
+FOLLOW(Exp) = { ), FOLLOW(ExpDecl) } = { ), ",", ; }
 
 ExpPrefix -> ( Exp )
           -> LeftValue ExpLength
@@ -31,11 +31,11 @@ ExpPrefix -> ( Exp )
           -> true
           -> false
           -> new PrimeType Index
-FOLLOW(ExpPrefix) = { FIRST(ExpTail), FOLLOW(ExpTail) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+FOLLOW(ExpPrefix) = { FIRST(ExpTail), FOLLOW(ExpTail) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 
 ExpTail -> op ExpPrefix ExpTail
         -> epsilon
-FOLLOW(ExpTail) = { ) }
+FOLLOW(ExpTail) = { FOLLOW(Exp) } = { ), ",", ; }
 
 ExpDecl -> = Exp
         -> epsilon
@@ -68,10 +68,10 @@ FOLLOW(Type) = { id }
 
 IndexTail -> [ Exp ] IndexTail
           -> epsilon
-FOLLOW(IndexTail) = { FOLLOW(Index) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+FOLLOW(IndexTail) = { FOLLOW(Index) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 
 Index -> [ Exp ] IndexTail
-FOLLOW(Index) = { FOLLOW(ExpTail), FIRST(ExpTail) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+FOLLOW(Index) = { FOLLOW(ExpPrefix) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 
 LeftValueTail -> [ Exp ] LeftValueTail
               -> epsilon

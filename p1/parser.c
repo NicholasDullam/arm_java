@@ -12,22 +12,15 @@ static void consume() {
     current_token = yylex();
 }
 
-// return true if current token is expected
-// otherwise return false
+// return true if current token is expected otherwise return false
 static bool peek(int expected_token) {
     if (current_token == expected_token) return true;
     return false;
 }
 
-// print error and exit program
-static void error() {
-    fprintf(stderr, "syntax error, abort\n");
-    exit(EXIT_FAILURE);
-}
-
 // peek the expected token, error if mistake and consume otherwise
 static void match(int expected_token) {
-    if (!peek(expected_token)) error();
+    if (!peek(expected_token)) syntax_error();
     else consume();
 }
 
@@ -78,7 +71,7 @@ void StatementList() {
         StatementList();
     } // rule 1
     else if (peek(TOK_CLOSEBRACE)) return; // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -146,7 +139,7 @@ void Statement() {
         match(TOK_ASSIGN);
         Exp();
         match(TOK_SEMICOLON);
-    } else error();
+    } else syntax_error();
 }
 
 /*
@@ -183,7 +176,7 @@ void ExpPrefix() {
         LeftValue();
         ExpLength();
     } // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -201,7 +194,7 @@ void ExpTail() {
         ExpTail();
     } // rule 1
     else if (TOK_CLOSEPAR) return; // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -216,7 +209,7 @@ void ExpDecl() {
         Exp();
     } // rule 1
     else if (peek(TOK_COMMA) || peek(TOK_SEMICOLON)) return; // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -233,7 +226,7 @@ void ExpList() {
         ExpList();
     } // rule 1
     else if (peek(TOK_SEMICOLON)) return; // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -250,7 +243,7 @@ void ExpLength() {
     else if (peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || peek(TOK_GREAT) || 
         peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
         peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR)) return; // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -273,7 +266,7 @@ void VarDecl() {
 */
 void PrimeType() {
     if (peek(KW_INT) || peek(KW_BOOLEAN) || peek(KW_STRING)) consume();
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -289,7 +282,7 @@ void TypeTail() {
         TypeTail();
     } // rule 1
     else if (peek(TOK_ID)) return; // rule 2
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -314,11 +307,13 @@ void IndexTail() {
         Exp();
         match(TOK_CLOSEBRACK);
         IndexTail();
-    } else if (peek(TOK_CLOSEBRACK)) { // rule 2
-        consume();
-    } else if (peek(TOK_EOF)) { // rule 2
+    } // rule 1
+    else if (peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || peek(TOK_COMMA) || peek(TOK_SEMICOLON) ||
+        peek(TOK_GREAT) || peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
+        peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR)) {
         return;
-    } else error();
+    } // rule 2 
+    else syntax_error();
 }
 
 /* 
@@ -348,7 +343,7 @@ void LeftValueTail() {
     else if (peek(TOK_ASSIGN) || peek(TOK_DOT) || peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || 
         peek(TOK_GREAT) || peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
         peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR)) return;
-    else error();
+    else syntax_error();
 }
 
 /*
@@ -379,7 +374,7 @@ void Operator() {
     if (peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || peek(TOK_GREAT) || 
         peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
         peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV)) consume();
-    else error();
+    else syntax_error();
 }
 
 int main(int argc, char *argv[]) {
@@ -398,6 +393,6 @@ int main(int argc, char *argv[]) {
     consume();
     Program();
 
-    if (current_token != TOK_EOF) error();
+    if (current_token != TOK_EOF) syntax_error();
     return EXIT_SUCCESS;
 }
