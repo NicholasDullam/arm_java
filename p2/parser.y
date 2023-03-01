@@ -29,6 +29,7 @@ struct ASTNode* root;
 // used in the lex file, returned by `yylex()` to denote the symbolic tokens.
 
 // These keyword-like tokens doesn't need to have a semantic value.
+
 %token TOK_AND TOK_OR TOK_LESS TOK_GREAT TOK_LEQ TOK_GREQ 
 %token TOK_NEQ TOK_EQ TOK_PLUS TOK_MINUS TOK_MULT TOK_DIV
 %token KW_BOOLEAN KW_CLASS KW_FALSE KW_INT MAIN KW_PUBLIC KW_TRUE KW_VOID 
@@ -41,7 +42,11 @@ struct ASTNode* root;
 
 // Left hand non-terminals. They are all associated to the `node` variant
 // declared in the %union section, which is of type `ASTNode *`.
-%type <node> Program MainClass VarDecl Statement Exp ExpList ExpTail Type PrimeType LeftValue Index MethodCall
+
+%type <node> Program MainClass VarDecl Statement Exp ExpList FormalList
+%type <node> ExpTail Type PrimeType LeftValue Index MethodCall
+%type <node> StaticVarDecl StaticMethodDecl
+
 %token <integer> INTEGER_LITERAL
 %token <string> STRING_LITERAL ID
 
