@@ -17,16 +17,19 @@ extern int yylex();
 
 %%
 
+if                    { return KW_IF;                 }
+else                  { return KW_ELSE;               }
+new                   { return KW_NEW;                }
 boolean               { return KW_BOOLEAN;            }
 class                 { return KW_CLASS;              }
 false                 { return KW_FALSE;              }
 int                   { return KW_INT;                }
-main                  { return MAIN;               }
+main                  { return MAIN;                  }
 public                { return KW_PUBLIC;             }
 static                { return KW_STATIC;             }
 String                { return KW_STRING;             }
-System\.out\.print    { return SYSTEM_OUT_PRINT;   }
-System\.out\.println  { return SYSTEM_OUT_PRINTLN; }
+System\.out\.print    { return SYSTEM_OUT_PRINT;      }
+System\.out\.println  { return SYSTEM_OUT_PRINTLN;    }
 void                  { return KW_VOID;               }
 
 [0-9]+ {

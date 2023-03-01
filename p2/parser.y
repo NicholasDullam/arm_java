@@ -33,6 +33,7 @@ struct ASTNode* root;
 %token TOK_NEQ TOK_EQ TOK_PLUS TOK_MINUS TOK_MULT TOK_DIV
 %token KW_BOOLEAN KW_CLASS KW_FALSE KW_INT MAIN KW_PUBLIC KW_TRUE KW_VOID 
 %token KW_IF KW_ELSE KW_RETURN KW_WHILE KW_LENGTH KW_STATIC KW_STRING 
+%token KW_NEW
 %token SYSTEM_OUT_PRINT SYSTEM_OUT_PRINTLN 
 
 // These tokens have additional information aside from what kind of token it
@@ -40,7 +41,7 @@ struct ASTNode* root;
 
 // Left hand non-terminals. They are all associated to the `node` variant
 // declared in the %union section, which is of type `ASTNode *`.
-%type <node> Program MainClass VarDecl Statement Exp Type PrimeType LeftValue Index ExpList MethodCall
+%type <node> Program MainClass VarDecl Statement Exp ExpList ExpTail Type PrimeType LeftValue Index MethodCall
 %token <integer> INTEGER_LITERAL
 %token <string> STRING_LITERAL ID
 
@@ -72,31 +73,7 @@ VarDecl:
         add_child($$, $1);
         add_child($$, $4);
     };
-
-Type: 
-    PrimeType {
-        $$ = new_node(NODETYPE_TYPE)
-        add_child($$, $1)
-    }
-    | Type '[' ']' {
-        $$ = new_node(NODETYPE_TYPE)
-        add_child($$, $1)
-    };
-
-PrimeType:                   
-    KW_INT {
-        $$ = new_node(NODETYPE_PRIMETYPE);
-        $$ -> data.type = DATATYPE_INT;
-    }
-    | KW_BOOLEAN {
-        $$ = new_node(NODETYPE_PRIMETYPE);
-        $$ -> data.type = DATATYPE_BOOLEAN;
-    }
-    | KW_STRING {
-        $$ = new_node(NODETYPE_PRIMETYPE);
-        $$ -> data.type = DATATYPE_STR;
-    };            
-
+     
 Statement:              
     VarDecl {
         $$ = new_node(NODETYPE_VARDECL);
@@ -111,24 +88,16 @@ Statement:
         add_child($$, $3);
     };
 
-// Make ExpList optional here
-MethodCall:
-    ID '(' ExpList ')' {
-        $$ = new_node(NODETYPE_METHODCALL);
-        set_string($$, $1);
-        add_child($$, $3);
-    }
-
 LeftValue:
     ID {
-        $$ = new_node(NODETYPE_LEFTVALUE)
-        set_string($$, $1)
+        $$ = new_node(NODETYPE_LEFTVALUE);
+        set_string_value($$, $1);
     }
     | LeftValue '[' Exp ']' {
-        $$ = new_node(NODETYPE_LEFTVALUE)
-        add_child($$, $1)
-        add_child($$, $3)
-    }
+        $$ = new_node(NODETYPE_LEFTVALUE);
+        add_child($$, $1);
+        add_child($$, $3);
+    };
 
 Index: 
     '[' Exp ']' {
@@ -139,7 +108,45 @@ Index:
         $$ = new_node(NODETYPE_INDEX);
         add_child($$, $1);
         add_child($$, $3);
+    };
+
+// All typing-based nonterminals
+
+Type: 
+    PrimeType {
+        $$ = new_node(NODETYPE_TYPE);
+        $$ -> data.type = $1 -> data.type;
+        add_child($$, $1);
     }
+    | Type '[' ']' {
+        $$ = new_node(NODETYPE_TYPE);
+        $$ -> data.type = $1 -> data.type;
+        add_child($$, $1);
+    };
+
+PrimeType:                   
+    KW_INT {
+        $$ = new_node(NODETYPE_PRIMETYPE);
+        $$ -> data.type = DATATYPE_INT;
+    }
+    | KW_BOOLEAN {
+        $$ = new_node(NODETYPE_PRIMETYPE);
+        $$ -> data.type = DATATYPE_BOOLEAN;
+    }
+    | KW_STRING {
+        $$ = new_node(NODETYPE_PRIMETYPE);
+        $$ -> data.type = DATATYPE_STR;
+    };  
+
+// Can opt to make two separate grammars here for MethodCall to divert the ExpList nullable grammar
+MethodCall:
+    ID '(' ExpList ')' {
+        $$ = new_node(NODETYPE_METHODCALL);
+        set_string_value($$, $1);
+        add_child($$, $3);
+    };     
+
+// All expression-based nonterminals
 
 Exp:                    
     INTEGER_LITERAL {
@@ -157,10 +164,32 @@ Exp:
     | KW_FALSE {
         $$ = new_node(NODETYPE_EXP);
         set_boolean_value($$, false);
-    };
+    }
+    | '(' Exp ')' {
+        $$ = new_node(NODETYPE_EXP);
+        add_child($$, $2);
+    }
+    | LeftValue {
+        $$ = new_node(NODETYPE_EXP);
+        add_child($$, $1);
+    } 
+    | LeftValue '.' KW_LENGTH {
+        $$ = new_node(NODETYPE_EXP);
+        add_child($$, $1);
+    }
+    | MethodCall {
+        $$ = new_node(NODETYPE_EXP);
+        add_child($$, $1);
+    }
+    | KW_NEW PrimeType Index {
+        $$ = new_node(NODETYPE_EXP);
+        add_child($$, $2);
+        add_child($$, $3);
+    }
+    ;
 
 ExpList:
-    Exp ExpList {
+    Exp ExpTail {
         $$ = new_node(NODETYPE_EXPLIST);
         add_child($$, $1);
         add_child($$, $2);
@@ -169,7 +198,19 @@ ExpList:
         $$ = new_node(NODETYPE_EXPLIST);
         add_child($$, $1);
     }
-    | %empty
+    | {
+        $$ = new_node(NODETYPE_EXPLIST);
+    };
+
+ExpTail:
+    ',' Exp ExpTail {
+        $$ = new_node(NODETYPE_EXPTAIL);
+        add_child($$, $2);
+        add_child($$, $3);
+    }
+    | {
+        $$ = new_node(NODETYPE_EXPTAIL);
+    };
 %%
 
 void yyerror(char* s) {
