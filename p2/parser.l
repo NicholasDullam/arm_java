@@ -26,6 +26,7 @@ false                 { return KW_FALSE;              }
 int                   { return KW_INT;                }
 main                  { return MAIN;                  }
 public                { return KW_PUBLIC;             }
+private               { return KW_PRIVATE;            }
 static                { return KW_STATIC;             }
 String                { return KW_STRING;             }
 System\.out\.print    { return SYSTEM_OUT_PRINT;      }

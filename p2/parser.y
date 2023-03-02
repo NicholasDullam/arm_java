@@ -30,11 +30,10 @@ struct ASTNode* root;
 
 // These keyword-like tokens doesn't need to have a semantic value.
 
-%token TOK_AND TOK_OR TOK_LESS TOK_GREAT TOK_LEQ TOK_GREQ 
-%token TOK_NEQ TOK_EQ TOK_PLUS TOK_MINUS TOK_MULT TOK_DIV
 %token KW_BOOLEAN KW_CLASS KW_FALSE KW_INT MAIN KW_PUBLIC KW_TRUE KW_VOID 
 %token KW_IF KW_ELSE KW_RETURN KW_WHILE KW_LENGTH KW_STATIC KW_STRING 
-%token KW_NEW
+%token KW_NEW KW_PRIVATE
+
 %token SYSTEM_OUT_PRINT SYSTEM_OUT_PRINTLN 
 
 // These tokens have additional information aside from what kind of token it
@@ -44,8 +43,8 @@ struct ASTNode* root;
 // declared in the %union section, which is of type `ASTNode *`.
 
 %type <node> Program MainClass VarDecl Statement Exp ExpList FormalList
-%type <node> ExpTail Type PrimeType LeftValue Index MethodCall
-%type <node> StaticVarDecl StaticMethodDecl
+%type <node> ExpTail ExpDecl Type PrimeType LeftValue Index MethodCall
+%type <node> StaticVarDecl StaticVarDeclList StaticMethodDecl StaticMethodDeclList VarDeclExpList 
 
 %token <integer> INTEGER_LITERAL
 %token <string> STRING_LITERAL ID
@@ -62,14 +61,19 @@ Program:
     };
 
 MainClass: 
-    KW_CLASS ID '{' 
+    KW_CLASS ID '{'
+        StaticVarDeclList 
         KW_PUBLIC KW_STATIC KW_VOID MAIN '(' KW_STRING '[' ']' ID ')' '{' Statement '}'
     '}'
     {
         $$ = new_node(NODETYPE_MAINCLASS);
         set_string_value($$, $2);
-        add_child($$, $15);
+        add_child($$, $16);
     };
+
+/*
+    All variable declaration grammars
+*/
 
 VarDecl:
     Type ID '=' Exp ';' {
@@ -78,6 +82,36 @@ VarDecl:
         add_child($$, $1);
         add_child($$, $4);
     };
+
+StaticVarDecl:
+    KW_PRIVATE KW_STATIC Type ID ExpDecl VarDeclExpList ';' {
+        $$ = new_node(NODETYPE_STATICVARDECL);
+        set_string_value($$, $4);
+        add_child($$, $3);
+        add_child($$, $5);
+        add_child($$, $6);
+    }
+
+StaticVarDeclList:
+    StaticVarDecl StaticVarDeclList {
+        $$ = new_node(NODETYPE_STATICVARDECLLIST);
+        add_child($$, $1);
+        add_child($$, $2);
+    }
+    | {
+        $$ = new_node(NODETYPE_STATICVARDECLLIST);
+    }
+
+VarDeclExpList:
+    ',' ID ExpDecl VarDeclExpList {
+        $$ = new_node(NODETYPE_VARDECLEXPLIST);
+        set_string_value($$, $2);
+        add_child($$, $3);
+        add_child($$, $4);
+    }
+    |  {
+        $$ = new_node(NODETYPE_VARDECLEXPLIST);
+    }
      
 Statement:              
     VarDecl {
@@ -115,7 +149,9 @@ Index:
         add_child($$, $3);
     };
 
-// All typing-based nonterminals
+/*
+    All typing related grammars
+*/
 
 Type: 
     PrimeType {
@@ -151,7 +187,9 @@ MethodCall:
         add_child($$, $3);
     };     
 
-// All expression-based nonterminals
+/*
+    All expression based grammars
+*/
 
 Exp:                    
     INTEGER_LITERAL {
@@ -192,6 +230,15 @@ Exp:
         add_child($$, $3);
     }
     ;
+
+ExpDecl:
+    '=' Exp {
+        $$ = new_node(NODETYPE_EXPDECL);
+        add_child($$, $2);
+    }
+    | {
+        $$ = new_node(NODETYPE_EXPDECL);
+    }
 
 ExpList:
     Exp ExpTail {
