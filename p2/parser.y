@@ -55,7 +55,7 @@ struct ASTNode* root;
 
 Program:                
     MainClass {   
-        $$ = new_node(NODETYPE_PROGRAM);
+        $$ = new_node(NODETYPE_PROGRAM, yylineno);
         root = $$;
         add_child($$, $1);
     };
@@ -66,7 +66,7 @@ MainClass:
         KW_PUBLIC KW_STATIC KW_VOID MAIN '(' KW_STRING '[' ']' ID ')' '{' Statement '}'
     '}'
     {
-        $$ = new_node(NODETYPE_MAINCLASS);
+        $$ = new_node(NODETYPE_MAINCLASS, yylineno);
         set_string_value($$, $2);
         add_child($$, $16);
     };
@@ -77,7 +77,7 @@ MainClass:
 
 VarDecl:
     Type ID '=' Exp ';' {
-        $$ = new_node(NODETYPE_VARDECL);
+        $$ = new_node(NODETYPE_VARDECL, yylineno);
         set_string_value($$, $2);
         add_child($$, $1);
         add_child($$, $4);
@@ -85,7 +85,7 @@ VarDecl:
 
 StaticVarDecl:
     KW_PRIVATE KW_STATIC Type ID ExpDecl VarDeclExpList ';' {
-        $$ = new_node(NODETYPE_STATICVARDECL);
+        $$ = new_node(NODETYPE_STATICVARDECL, yylineno);
         set_string_value($$, $4);
         add_child($$, $3);
         add_child($$, $5);
@@ -94,23 +94,23 @@ StaticVarDecl:
 
 StaticVarDeclList:
     StaticVarDecl StaticVarDeclList {
-        $$ = new_node(NODETYPE_STATICVARDECLLIST);
+        $$ = new_node(NODETYPE_STATICVARDECLLIST, yylineno);
         add_child($$, $1);
         add_child($$, $2);
     }
     | {
-        $$ = new_node(NODETYPE_STATICVARDECLLIST);
+        $$ = new_node(NODETYPE_STATICVARDECLLIST, yylineno);
     }
 
 VarDeclExpList:
     ',' ID ExpDecl VarDeclExpList {
-        $$ = new_node(NODETYPE_VARDECLEXPLIST);
+        $$ = new_node(NODETYPE_VARDECLEXPLIST, yylineno);
         set_string_value($$, $2);
         add_child($$, $3);
         add_child($$, $4);
     }
     |  {
-        $$ = new_node(NODETYPE_VARDECLEXPLIST);
+        $$ = new_node(NODETYPE_VARDECLEXPLIST, yylineno);
     }
 
 /*
@@ -119,46 +119,46 @@ VarDeclExpList:
 
 Statement:              
     VarDecl {
-        $$ = new_node(NODETYPE_VARDECL);
+        $$ = new_node(NODETYPE_VARDECL, yylineno);
         add_child($$, $1);
     }
     | SYSTEM_OUT_PRINTLN '(' Exp ')' ';' {
-        $$ = new_node(NODETYPE_STATEMENT);
+        $$ = new_node(NODETYPE_STATEMENT, yylineno);
         add_child($$, $3);
     }
     | SYSTEM_OUT_PRINT '(' Exp ')' ';' {
-        $$ = new_node(NODETYPE_STATEMENT);
+        $$ = new_node(NODETYPE_STATEMENT, yylineno);
         add_child($$, $3);
     };
 
 StatementList:
     Statement StatementList {
-        $$ = new_node(NODETYPE_STATEMENTLIST)
+        $$ = new_node(NODETYPE_STATEMENTLIST, yylineno)
         add_child($$, $1);
         add_child($$, $2);
     }
     | {
-        $$ = new_node(NODETYPE_STATEMENTLIST)
+        $$ = new_node(NODETYPE_STATEMENTLIST, yylineno)
     }
 
 LeftValue:
     ID {
-        $$ = new_node(NODETYPE_LEFTVALUE);
+        $$ = new_node(NODETYPE_LEFTVALUE, yylineno);
         set_string_value($$, $1);
     }
     | LeftValue '[' Exp ']' {
-        $$ = new_node(NODETYPE_LEFTVALUE);
+        $$ = new_node(NODETYPE_LEFTVALUE, yylineno);
         add_child($$, $1);
         add_child($$, $3);
     };
 
 Index: 
     '[' Exp ']' {
-        $$ = new_node(NODETYPE_INDEX);
+        $$ = new_node(NODETYPE_INDEX, yylineno);
         add_child($$, $2);
     }
     | Index '[' Exp ']' {
-        $$ = new_node(NODETYPE_INDEX);
+        $$ = new_node(NODETYPE_INDEX, yylineno);
         add_child($$, $1);
         add_child($$, $3);
     };
@@ -169,27 +169,27 @@ Index:
 
 Type: 
     PrimeType {
-        $$ = new_node(NODETYPE_TYPE);
+        $$ = new_node(NODETYPE_TYPE, yylineno);
         $$ -> data.type = $1 -> data.type;
         add_child($$, $1);
     }
     | Type '[' ']' {
-        $$ = new_node(NODETYPE_TYPE);
+        $$ = new_node(NODETYPE_TYPE, yylineno);
         $$ -> data.type = $1 -> data.type;
         add_child($$, $1);
     };
 
 PrimeType:                   
     KW_INT {
-        $$ = new_node(NODETYPE_PRIMETYPE);
+        $$ = new_node(NODETYPE_PRIMETYPE, yylineno);
         $$ -> data.type = DATATYPE_INT;
     }
     | KW_BOOLEAN {
-        $$ = new_node(NODETYPE_PRIMETYPE);
+        $$ = new_node(NODETYPE_PRIMETYPE, yylineno);
         $$ -> data.type = DATATYPE_BOOLEAN;
     }
     | KW_STRING {
-        $$ = new_node(NODETYPE_PRIMETYPE);
+        $$ = new_node(NODETYPE_PRIMETYPE, yylineno);
         $$ -> data.type = DATATYPE_STR;
     };  
 
@@ -199,7 +199,7 @@ PrimeType:
 
 MethodCall:
     ID '(' ExpList ')' {
-        $$ = new_node(NODETYPE_METHODCALL);
+        $$ = new_node(NODETYPE_METHODCALL, yylineno);
         set_string_value($$, $1);
         add_child($$, $3);
     };     
@@ -218,39 +218,39 @@ FormalList:
 
 Exp:                    
     INTEGER_LITERAL {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         set_int_value($$, $1);
     }
     | STRING_LITERAL {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         set_string_value($$, $1);
     }
     | KW_TRUE {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         set_boolean_value($$, true);
     }
     | KW_FALSE {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         set_boolean_value($$, false);
     }
     | '(' Exp ')' {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         add_child($$, $2);
     }
     | LeftValue {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         add_child($$, $1);
     } 
     | LeftValue '.' KW_LENGTH {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         add_child($$, $1);
     }
     | MethodCall {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         add_child($$, $1);
     }
     | KW_NEW PrimeType Index {
-        $$ = new_node(NODETYPE_EXP);
+        $$ = new_node(NODETYPE_EXP, yylineno);
         add_child($$, $2);
         add_child($$, $3);
     }
@@ -258,35 +258,35 @@ Exp:
 
 ExpDecl:
     '=' Exp {
-        $$ = new_node(NODETYPE_EXPDECL);
+        $$ = new_node(NODETYPE_EXPDECL, yylineno);
         add_child($$, $2);
     }
     | {
-        $$ = new_node(NODETYPE_EXPDECL);
+        $$ = new_node(NODETYPE_EXPDECL, yylineno);
     }
 
 ExpList:
     Exp ExpTail {
-        $$ = new_node(NODETYPE_EXPLIST);
+        $$ = new_node(NODETYPE_EXPLIST, yylineno);
         add_child($$, $1);
         add_child($$, $2);
     }
     | Exp {
-        $$ = new_node(NODETYPE_EXPLIST);
+        $$ = new_node(NODETYPE_EXPLIST, yylineno);
         add_child($$, $1);
     }
     | {
-        $$ = new_node(NODETYPE_EXPLIST);
+        $$ = new_node(NODETYPE_EXPLIST, yylineno);
     };
 
 ExpTail:
     ',' Exp ExpTail {
-        $$ = new_node(NODETYPE_EXPTAIL);
+        $$ = new_node(NODETYPE_EXPTAIL, yylineno);
         add_child($$, $2);
         add_child($$, $3);
     }
     | {
-        $$ = new_node(NODETYPE_EXPTAIL);
+        $$ = new_node(NODETYPE_EXPTAIL, yylineno);
     };
 %%
 

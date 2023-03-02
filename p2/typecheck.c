@@ -12,11 +12,13 @@ static void report_type_violation(int line_number) {
     fprintf(stderr, "Type Violation in Line %d", line_number);
 }
 
+// Begin type checking from root nonterminal
 void checkProgram(struct ASTNode * program){
     num_entries = 0;
     checkMain(program->children[program->num_children-1]);
 }
 
+// Check the main nonterminal 
 void checkMain(struct ASTNode * mainClass){
     char * nameOfClass = mainClass -> data.value.string_value;
 
@@ -25,17 +27,7 @@ void checkMain(struct ASTNode * mainClass){
     checkStatementList(mainClass->children[2]);
 }
 
-void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
-    enum NodeType staticMethodDeclListType = staticMethodDeclList -> node_type;
-    if (staticMethodDeclListType === NODETYPE_NULLABLE) return;
-    
-    struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[0];
-    struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[1];
-
-    // check ind methoddecl
-    checkStaticVarDeclList(nextStaticMethodDeclList)
-}
-
+// Check the available static var decl lists (nullable)
 void checkStaticVarDeclList(struct ASTNode* staticVarDeclList) {
     enum NodeType staticVarDeclListType = staticVarDeclList -> node_type;
     if (staticVarDeclListType == NODETYPE_NULLABLE) return;
@@ -44,7 +36,19 @@ void checkStaticVarDeclList(struct ASTNode* staticVarDeclList) {
     struct ASTNode * nextStaticVarDeclList = staticVarDeclList -> children[1];
 
     // check ind vardecl
-    checkStaticVarDeclList(nextStaticVarDeclList)
+    checkStaticVarDeclList(nextStaticVarDeclList);
+}
+
+// Check the available static method decl lists (nullable)
+void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
+    enum NodeType staticMethodDeclListType = staticMethodDeclList -> node_type;
+    if (staticMethodDeclListType == NODETYPE_NULLABLE) return;
+    
+    struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[0];
+    struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[1];
+
+    // check ind methoddecl
+    checkStaticVarDeclList(nextStaticMethodDeclList);
 }
 
 // Check the available statement lists (nullable)
@@ -57,6 +61,16 @@ void checkStatementList(struct ASTNode* statementList) {
     
     checkStatement(statement);
     checkStatementList(nextStatementList);
+}
+
+// Check the given static var decl
+void checkStaticVarDecl(struct ASTNode* staticVarDecl) {
+    // TODO
+}
+
+// Check the given static method decl
+void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
+    // TODO
 }
 
 // Check the given statement

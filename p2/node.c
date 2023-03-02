@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct ASTNode* new_node(enum NodeType t){
+struct ASTNode* new_node(enum NodeType t, int line_no){
     struct ASTNode* ast_node = malloc(sizeof(struct ASTNode));
     memset(ast_node, 0, sizeof(struct ASTNode));
     ast_node->node_type = t;
+    ast_node->line_no = line_no;
     return ast_node;
 }
 

@@ -51,6 +51,7 @@ enum NodeType {
 struct ASTNode {
     struct ASTNode* children[MAX_NUM_CHILDREN];
     int num_children;
+    int line_no;
     
     enum NodeType node_type;
     struct SemanticData data;
@@ -58,7 +59,7 @@ struct ASTNode {
 
 
 // Creates a new node with 0 children on the heap using `malloc()`.
-struct ASTNode* new_node(enum NodeType t);
+struct ASTNode* new_node(enum NodeType t, int line_no);
 // Adds the given children to the parent node. Returns -1 if the capacity is full.
 int add_child(struct ASTNode* parent, struct ASTNode* child);
 
