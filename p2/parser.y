@@ -43,7 +43,7 @@ struct ASTNode* root;
 // declared in the %union section, which is of type `ASTNode *`.
 
 %type <node> Program MainClass VarDecl Statement Exp ExpList FormalList
-%type <node> ExpTail ExpDecl Type PrimeType LeftValue Index MethodCall
+%type <node> ExpTail ExpDecl Type PrimeType LeftValue Index MethodCall StatementList
 %type <node> StaticVarDecl StaticVarDeclList StaticMethodDecl StaticMethodDeclList VarDeclExpList 
 
 %token <integer> INTEGER_LITERAL
@@ -112,20 +112,34 @@ VarDeclExpList:
     |  {
         $$ = new_node(NODETYPE_VARDECLEXPLIST);
     }
-     
+
+/*
+    All statement based grammars
+*/
+
 Statement:              
     VarDecl {
         $$ = new_node(NODETYPE_VARDECL);
         add_child($$, $1);
     }
     | SYSTEM_OUT_PRINTLN '(' Exp ')' ';' {
-        $$ = new_node(NODETYPE_PRINTLN);
+        $$ = new_node(NODETYPE_STATEMENT);
         add_child($$, $3);
     }
     | SYSTEM_OUT_PRINT '(' Exp ')' ';' {
-        $$ = new_node(NODETYPE_PRINT);
+        $$ = new_node(NODETYPE_STATEMENT);
         add_child($$, $3);
     };
+
+StatementList:
+    Statement StatementList {
+        $$ = new_node(NODETYPE_STATEMENTLIST)
+        add_child($$, $1);
+        add_child($$, $2);
+    }
+    | {
+        $$ = new_node(NODETYPE_STATEMENTLIST)
+    }
 
 LeftValue:
     ID {
@@ -179,13 +193,24 @@ PrimeType:
         $$ -> data.type = DATATYPE_STR;
     };  
 
-// Can opt to make two separate grammars here for MethodCall to divert the ExpList nullable grammar
+/*
+    All method based grammars
+*/
+
 MethodCall:
     ID '(' ExpList ')' {
         $$ = new_node(NODETYPE_METHODCALL);
         set_string_value($$, $1);
         add_child($$, $3);
     };     
+
+StaticMethodDecl:
+    KW_PUBLIC KW_STATIC Type ID '(' FormalList ')' '{'
+        StatementList
+    '}'
+
+FormalList:
+
 
 /*
     All expression based grammars

@@ -19,10 +19,47 @@ void checkProgram(struct ASTNode * program){
 
 void checkMain(struct ASTNode * mainClass){
     char * nameOfClass = mainClass -> data.value.string_value;
-    
-    checkStatement(mainClass->children[0]);
+
+    checkStaticVarDeclList(mainClass->children[0]);
+    checkStaticMethodDeclList(mainClass->children[1]);
+    checkStatementList(mainClass->children[2]);
 }
 
+void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
+    enum NodeType staticMethodDeclListType = staticMethodDeclList -> node_type;
+    if (staticMethodDeclListType === NODETYPE_NULLABLE) return;
+    
+    struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[0];
+    struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[1];
+
+    // check ind methoddecl
+    checkStaticVarDeclList(nextStaticMethodDeclList)
+}
+
+void checkStaticVarDeclList(struct ASTNode* staticVarDeclList) {
+    enum NodeType staticVarDeclListType = staticVarDeclList -> node_type;
+    if (staticVarDeclListType == NODETYPE_NULLABLE) return;
+
+    struct ASTNode * staticVarDecl = staticVarDeclList -> children[0];
+    struct ASTNode * nextStaticVarDeclList = staticVarDeclList -> children[1];
+
+    // check ind vardecl
+    checkStaticVarDeclList(nextStaticVarDeclList)
+}
+
+// Check the available statement lists (nullable)
+void checkStatementList(struct ASTNode* statementList) {
+    enum NodeType statementListType = statementList -> node_type;
+    if (statementListType == NODETYPE_NULLABLE) return;
+
+    struct ASTNode * statement = statementList -> children[0];
+    struct ASTNode * nextStatementList = statementList -> children[1];
+    
+    checkStatement(statement);
+    checkStatementList(nextStatementList);
+}
+
+// Check the given statement
 void checkStatement(struct ASTNode* statement){
     enum NodeType statementType = statement -> node_type;
     if (statementType == NODETYPE_PRINT || statementType == NODETYPE_PRINTLN) {

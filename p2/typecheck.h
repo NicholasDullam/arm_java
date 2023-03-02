@@ -17,6 +17,13 @@ struct SymbolTableEntry * find_symbol(char* id);
 
 void checkProgram(struct ASTNode* program);
 void checkMain(struct ASTNode* mainClass);
+
+void checkStaticMethodDeclList(struct ASTNODE* staticMethodDeclList);
+void checkStaticVarDeclList(struct ASTNode* staticVarDeclList);
+void checkStatementList(struct ASTNode* statementList);
+
+void checkStaticMethodDecl(struct ASTNODE* staticMethodDecl);
+void checkStaticVarDecl(struct ASTNode* staticVarDecl);
 void checkStatement(struct ASTNode* statement);
 
 extern int num_errors;

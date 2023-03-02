@@ -139,7 +139,8 @@ void Statement() {
         match(TOK_ASSIGN);
         Exp();
         match(TOK_SEMICOLON);
-    } else syntax_error();
+    } // rule 7 
+    else syntax_error();
 }
 
 /*
@@ -191,6 +192,7 @@ void ExpTail() {
     peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV)) {
         Operator();
         ExpPrefix();
+        //printf("Testing\n");
         ExpTail();
     } // rule 1
     else if (TOK_CLOSEPAR) return; // rule 2
@@ -233,15 +235,15 @@ void ExpList() {
     ExpLength -> . length
               -> epsilon
     FIRST(ExpLength) = { . }
-    FOLLOW(ExpList) = { FOLLOW(ExpPrefix) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+    FOLLOW(ExpLength) = { FOLLOW(ExpPrefix) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 */
 void ExpLength() {
     if (peek(TOK_DOT)) {
         match(TOK_DOT);
         match(KW_LENGTH);
     } // rule 1
-    else if (peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || peek(TOK_GREAT) || 
-        peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
+    else if (peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || peek(TOK_GREAT) || peek(TOK_COMMA) ||
+        peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || peek(TOK_SEMICOLON) ||
         peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR)) return; // rule 2
     else syntax_error();
 }
@@ -249,6 +251,7 @@ void ExpLength() {
 /*
     VarDecl -> Type id ExpDecl ExpList ;
     FIRST(VarDecl) = FIRST(TYPE) = { int, boolean, String }
+    FOLLOW(VarDecl) = { FOLLOW(Statement) } = { int, boolean, String, "{", if, while, System.out.println, System.out.print, id, return, "}" }
 */
 void VarDecl() {
     Type();
@@ -263,6 +266,7 @@ void VarDecl() {
               -> boolean
               -> String
     FIRST(PrimeType) = { int, boolean, String }
+    FOLLOW(PrimeType) = { FIRST(Index), FIRST(TypeTail) } = { [, int, boolean, String }
 */
 void PrimeType() {
     if (peek(KW_INT) || peek(KW_BOOLEAN) || peek(KW_STRING)) consume();
@@ -299,7 +303,7 @@ void Type() {
     IndexTail -> [ Exp ] IndexTail
               -> epsilon
     FIRST(IndexTail) = { [ }
-    FOLLOW(IndexTail) = { FOLLOW(Index) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+    FOLLOW(IndexTail) = { FOLLOW(Index) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 */
 void IndexTail() {
     if (peek(TOK_OPENBRACK)) { // rule 1
@@ -319,6 +323,7 @@ void IndexTail() {
 /* 
     Index -> [ Exp ] IndexTail
     FIRST(Index) = { [ }
+    FOLLOW(Index) = { FOLLOW(ExpPrefix) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 */
 void Index() {
     match(TOK_OPENBRACK);
@@ -330,8 +335,8 @@ void Index() {
 /*
     LeftValueTail -> [ Exp ] LeftValueTail
                   -> epsilon
-    FIRST(LeftValueTail) = { [ }\
-    FOLLOW(LeftValueTail) = { FOLLOW(LeftValue) } = { =, . }
+    FIRST(LeftValueTail) = { [ }
+    FOLLOW(LeftValueTail) = { FOLLOW(LeftValue) } = { =, ., ",", ;, ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
 */
 void LeftValueTail() {
     if (peek(TOK_OPENBRACK)) {
@@ -341,14 +346,14 @@ void LeftValueTail() {
         LeftValueTail();
     }
     else if (peek(TOK_ASSIGN) || peek(TOK_DOT) || peek(TOK_AND) || peek(TOK_OR) || peek(TOK_LESS) || 
-        peek(TOK_GREAT) || peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || 
-        peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR)) return;
+        peek(TOK_GREAT) || peek(TOK_LEQ) || peek(TOK_GREQ) || peek(TOK_NEQ) || peek(TOK_EQ) || peek(TOK_SEMICOLON) ||
+        peek(TOK_PLUS) || peek(TOK_MINUS) || peek(TOK_MULT) || peek(TOK_DIV) || peek(TOK_CLOSEPAR) || peek(TOK_COMMA)) return;
     else syntax_error();
 }
 
 /*
     LeftValue -> id LeftValueTail
-    FIRST(LeftValue) = { id }
+    FOLLOW(LeftValue) = { =, FIRST(ExpLength), FOLLOW(ExpLength) } = { =, ., ",", ;, ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
 */
 void LeftValue() {
     match(TOK_ID);

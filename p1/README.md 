@@ -47,7 +47,7 @@ FOLLOW(ExpList) = { ; }
 
 ExpLength -> . length
           -> epsilon
-FOLLOW(ExpList) = { FOLLOW(ExpPrefix) } = { ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
+FOLLOW(ExpLength) = { FOLLOW(ExpPrefix) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, ==, +, -, *, / }
 
 VarDecl -> Type id ExpDecl ExpList ;
 FOLLOW(VarDecl) = { FOLLOW(Statement) } = { int, boolean, String, "{", if, while, System.out.println,
@@ -75,7 +75,7 @@ FOLLOW(Index) = { FOLLOW(ExpPrefix) } = { ), ",", ;, &&, ||, <, >, <=, >=, !=, =
 
 LeftValueTail -> [ Exp ] LeftValueTail
               -> epsilon
-FOLLOW(LeftValueTail) = { FOLLOW(LeftValue) } = { =, ., ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
+FOLLOW(LeftValueTail) = { FOLLOW(LeftValue) } = { =, ., ",", ;, ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
 
 LeftValue -> id LeftValueTail
-FOLLOW(LeftValue) = { =, FIRST(ExpLength), FOLLOW(ExpLength) } = { =, ., ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
+FOLLOW(LeftValue) = { =, FIRST(ExpLength), FOLLOW(ExpLength) } = { =, ., ",", ;, ), &&, ||, <, >, <=, >=, !=, ==, +, -, *, / } 
