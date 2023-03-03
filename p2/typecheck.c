@@ -9,11 +9,11 @@ int num_entries = 0;
 struct SymbolTableEntry *symbol_table[50];
 
 static void report_type_violation(int line_number) {
-    fprintf(stderr, "Type Violation in Line %d", line_number);
+    fprintf(stderr, "Type Violation in Line %d\n", line_number);
 }
 
 // Begin type checking from root nonterminal
-void checkProgram(struct ASTNode * program){
+void checkProgram(struct ASTNode * program) {
     num_entries = 0;
     checkMain(program->children[program->num_children-1]);
 }
@@ -27,21 +27,16 @@ void checkMain(struct ASTNode * mainClass){
     checkStatementList(mainClass->children[2]);
 }
 
-
-
-
-
-
 // Check the available static var decl lists (nullable)
 void checkStaticVarDeclList(struct ASTNode* staticVarDeclList) {
     enum NodeType staticVarDeclListType = staticVarDeclList -> node_type;
     if (staticVarDeclListType == NODETYPE_NULLABLE) return;
 
-    struct ASTNode * staticVarDecl = staticVarDeclList -> children[0];
-    struct ASTNode * nextStaticVarDeclList = staticVarDeclList -> children[1];
+    struct ASTNode * nextStaticVarDeclList = staticVarDeclList -> children[0];
+    struct ASTNode * staticVarDecl = staticVarDeclList -> children[1];
 
-    checkStaticVarDecl(staticVarDecl);
     checkStaticVarDeclList(nextStaticVarDeclList);
+    checkStaticVarDecl(staticVarDecl);
 }
 
 // Check the available static method decl lists (nullable)
@@ -49,11 +44,11 @@ void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
     enum NodeType staticMethodDeclListType = staticMethodDeclList -> node_type;
     if (staticMethodDeclListType == NODETYPE_NULLABLE) return;
     
-    struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[0];
-    struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[1];
+    struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[0];
+    struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[1];
 
-    checkStaticMethodDecl(staticMethodDecl);
     checkStaticMethodDeclList(nextStaticMethodDeclList);
+    checkStaticMethodDecl(staticMethodDecl);
 }
 
 // Check the available statement lists (nullable)
@@ -61,17 +56,12 @@ void checkStatementList(struct ASTNode* statementList) {
     enum NodeType statementListType = statementList -> node_type;
     if (statementListType == NODETYPE_NULLABLE) return;
 
-    struct ASTNode * statement = statementList -> children[0];
-    struct ASTNode * nextStatementList = statementList -> children[1];
-    
-    checkStatement(statement);
+    struct ASTNode * nextStatementList = statementList -> children[0];
+    struct ASTNode * statement = statementList -> children[1];
+
     checkStatementList(nextStatementList);
+    checkStatement(statement);
 }
-
-
-
-
-
 
 // Check the given static var decl
 void checkStaticVarDecl(struct ASTNode* staticVarDecl) {
@@ -79,32 +69,47 @@ void checkStaticVarDecl(struct ASTNode* staticVarDecl) {
     checkVarDecl(varDecl);
 }
 
+// Check variable declarations and all exp declarations
 void checkVarDecl(struct ASTNode* varDecl) {
-    enum DataType varType = varDecl -> children[0] -> data.type;
-    char * id = varDecl -> data.value.string_value;
-
     struct ASTNode * expDecl = varDecl -> children[1];
     struct ASTNode * expList = varDecl -> children[2];
     
     enum NodeType expDeclType = expDecl -> node_type;
     enum NodeType expListType = expList -> node_type;
+    
+    // Check the local expression declaration
+    checkExpDecl(varDecl, varDecl, expDecl);
 
-    // Handle base logic, then go through existing list of expressions
-    if (expDeclType == NODETYPE_NULLABLE) {
-        bool typeViolationExists = false;
+    // Check all expression declarations in the expression list
+    while (expListType != NODETYPE_NULLABLE) {
+        expDecl = expList -> children[1];
+        checkExpDecl(varDecl, expList, expDecl);
+        expList = expList -> children[2];
+        expListType = expList -> node_type;
+    }
+}
+
+// Check expression declaration for a given variable declaration
+void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNode* expDecl) {
+    enum DataType varType = varDecl -> children[0] -> data.type;
+    enum NodeType expDeclType = expDecl -> node_type;
+    char * id = parent -> data.value.string_value;
+    bool typeViolationExists = false;
+
+    if (expDeclType != NODETYPE_NULLABLE) {
         struct ASTNode * exp = expDecl -> children[0];
         enum DataType expType = exp -> data.type;
 
         if (expType != varType) {
             typeViolationExists = true;
-            report_type_violation(varDecl->line_no);
+            report_type_violation(varDecl -> line_no);
         }
 
         struct SymbolTableEntry * foundEntry = find_symbol(id);
 
         if (foundEntry) {
             typeViolationExists = true;
-            report_type_violation(varDecl->line_no);
+            report_type_violation(varDecl -> line_no);
             
             if (foundEntry -> type != varType) {
                 foundEntry -> type = DATATYPE_UNDEFINED;
@@ -114,16 +119,31 @@ void checkVarDecl(struct ASTNode* varDecl) {
         if (!typeViolationExists) {
             add_to_symbol_table(id, expDecl -> data);
         }
-    } // handle when expDecl is not nullable
-    
-    while (expListType != NODETYPE_NULLABLE) {
-        // handle checking the remainder of the expList
+    } else {
+        struct SymbolTableEntry * foundEntry = find_symbol(id);
+
+        if (foundEntry) {
+            typeViolationExists = true;
+            report_type_violation(varDecl -> line_no);
+            
+            if (foundEntry -> type != varType) {
+                foundEntry -> type = DATATYPE_UNDEFINED;
+            }
+        }
+
+        if (!typeViolationExists) {
+            expDecl -> data.type = DATATYPE_UNDEFINED;
+            add_to_symbol_table(id, expDecl -> data);
+        }
     }
 }
 
 // Check the given static method decl
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
-    // TODO
+    struct ASTNode * statementList = staticMethodDecl -> children[2];
+
+    // TODO (check function symbol table entry and statementlist [maybe return value typing as well])
+    checkStatementList(statementList);
 }
 
 // Check the given statement
@@ -135,34 +155,7 @@ void checkStatement(struct ASTNode* statement){
         // reported here - undefined type is due to other type violations.
     } else if (statementType == NODETYPE_VARDECL) {
         struct ASTNode * varDecl = statement -> children[0];
-        enum DataType var_type = varDecl ->children[0]->data.type;
-        enum DataType expr_type = varDecl ->children[1]->data.type;
-        char * id = varDecl->data.value.string_value;
-        
-        bool type_violation_exists = false;
-
-        // Reports an error if the variable initializer expression has a different type
-        if (var_type == expr_type) {
-            type_violation_exists = true;
-            report_type_violation(varDecl->line_no);
-        }
-
-        // Reports an error if the declared variable is declared before
-        struct SymbolTableEntry * found_entry = find_symbol(id);
-        if (found_entry != NULL) {
-            type_violation_exists = true;
-            report_type_violation(varDecl->line_no);
-            
-            // Changes the type of the variable to undefined, unless the 
-            // redefinition is the same type as the existing one.
-            if (found_entry->type != var_type) 
-                found_entry->type = DATATYPE_UNDEFINED;
-        }
-
-        // If no error is reported, add the variable declaration to the symbol table
-        if (!type_violation_exists) {
-            add_to_symbol_table(id, varDecl->children[1]->data);
-        };
+        checkVarDecl(varDecl);
     }
 }
 

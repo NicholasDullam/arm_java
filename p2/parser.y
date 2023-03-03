@@ -30,11 +30,14 @@ struct ASTNode* root;
 
 // These keyword-like tokens doesn't need to have a semantic value.
 
+%token TOK_AND TOK_OR TOK_LESS TOK_GREAT TOK_LEQ TOK_GREQ TOK_NEQ
+%token TOK_EQ TOK_PLUS TOK_MINUS TOK_MULT TOK_DIV
+
 %token KW_BOOLEAN KW_CLASS KW_FALSE KW_INT MAIN KW_PUBLIC KW_TRUE KW_VOID 
 %token KW_IF KW_ELSE KW_RETURN KW_WHILE KW_LENGTH KW_STATIC KW_STRING 
 %token KW_NEW KW_PRIVATE
 
-%token SYSTEM_OUT_PRINT SYSTEM_OUT_PRINTLN 
+%token SYSTEM_OUT_PRINT SYSTEM_OUT_PRINTLN INTEGER_PARSE_INT
 
 // These tokens have additional information aside from what kind of token it
 // is, so they carry semantic information.
@@ -42,7 +45,7 @@ struct ASTNode* root;
 // Left hand non-terminals. They are all associated to the `node` variant
 // declared in the %union section, which is of type `ASTNode *`.
 
-%type <node> Program MainClass VarDecl Statement Exp ExpList FormalList
+%type <node> Program MainClass VarDecl Statement Exp ExpList FormalList Arg ArgList
 %type <node> ExpTail ExpDecl Type PrimeType LeftValue Index MethodCall StatementList
 %type <node> StaticVarDecl StaticVarDeclList StaticMethodDecl StaticMethodDeclList VarDeclExpList 
 
@@ -67,14 +70,17 @@ Program:
 MainClass: 
     KW_CLASS ID '{'
         StaticVarDeclList 
-        KW_PUBLIC KW_STATIC KW_VOID MAIN '(' KW_STRING '[' ']' ID ')' '{' Statement '}'
+        StaticMethodDeclList
+        KW_PUBLIC KW_STATIC KW_VOID MAIN '(' KW_STRING '[' ']' ID ')' '{' 
+            StatementList
+        '}'
     '}'
-    {
+    {   
         $$ = new_node(NODETYPE_MAINCLASS, yylineno);
-        set_string_value($$, $2);
+        set_string_value($$, $14);
         add_child($$, $4);
-        //add_child($$, $5);
-        add_child($$, $16);
+        add_child($$, $5);
+        add_child($$, $17);
     };
 
 /*
@@ -97,13 +103,13 @@ StaticVarDecl:
     }
 
 StaticVarDeclList:
-    StaticVarDecl StaticVarDeclList {
+    StaticVarDeclList StaticVarDecl {
         $$ = new_node(NODETYPE_STATICVARDECLLIST, yylineno);
         add_child($$, $1);
         add_child($$, $2);
     }
     | {
-        $$ = new_node(NODETYPE_STATICVARDECLLIST, yylineno);
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     }
 
 VarDeclExpList:
@@ -114,7 +120,7 @@ VarDeclExpList:
         add_child($$, $4);
     }
     |  {
-        $$ = new_node(NODETYPE_VARDECLEXPLIST, yylineno);
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     }
 
 /*
@@ -136,13 +142,13 @@ Statement:
     };
 
 StatementList:
-    Statement StatementList {
-        $$ = new_node(NODETYPE_STATEMENTLIST, yylineno)
+    StatementList Statement {
+        $$ = new_node(NODETYPE_STATEMENTLIST, yylineno);
         add_child($$, $1);
         add_child($$, $2);
     }
     | {
-        $$ = new_node(NODETYPE_STATEMENTLIST, yylineno)
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     }
 
 LeftValue:
@@ -214,12 +220,46 @@ StaticMethodDecl:
     '}' {
         $$ = new_node(NODETYPE_STATICMETHODDECL, yylineno);
         set_string_value($$, $4);
+        add_child($$, $3);
         add_child($$, $6);
-        add_child($$, $8);
+        add_child($$, $9);
+    }
+
+StaticMethodDeclList:
+    StaticMethodDeclList StaticMethodDecl {
+        $$ = new_node(NODETYPE_STATICMETHODDECLLIST, yylineno);
+        add_child($$, $1);
+        add_child($$, $2);
+    }
+    | {
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     }
 
 FormalList:
+    ArgList Arg {
+        $$ = new_node(NODETYPE_FORMALLIST, yylineno);
+        add_child($$, $1);
+        add_child($$, $2);
+    }
+    | {
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
+    } 
 
+Arg:
+    Type ID {
+        $$ = new_node(NODETYPE_ARG, yylineno);
+        set_string_value($$, $2);
+    }
+
+ArgList:
+    ',' Arg ArgList {
+        $$ = new_node(NODETYPE_ARGLIST, yylineno);
+        add_child($$, $2);
+        add_child($$, $3);
+    }
+    | {
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
+    }
 
 /*
     All expression based grammars
@@ -244,6 +284,7 @@ Exp:
     }
     | '(' Exp ')' {
         $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ -> data.type = $2 -> data.type;
         add_child($$, $2);
     }
     | LeftValue {
@@ -271,7 +312,7 @@ ExpDecl:
         add_child($$, $2);
     }
     | {
-        $$ = new_node(NODETYPE_EXPDECL, yylineno);
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     }
 
 ExpList:
@@ -280,12 +321,8 @@ ExpList:
         add_child($$, $1);
         add_child($$, $2);
     }
-    | Exp {
-        $$ = new_node(NODETYPE_EXPLIST, yylineno);
-        add_child($$, $1);
-    }
     | {
-        $$ = new_node(NODETYPE_EXPLIST, yylineno);
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     };
 
 ExpTail:
@@ -295,7 +332,7 @@ ExpTail:
         add_child($$, $3);
     }
     | {
-        $$ = new_node(NODETYPE_EXPTAIL, yylineno);
+        $$ = new_node(NODETYPE_NULLABLE, yylineno);
     };
 %%
 

@@ -16,6 +16,9 @@ extern int yylex();
 %option yylineno
 
 %%
+"//".*                               { } /* inline comments */
+"/*"([^\*]|("*"+[^\/\*]))*"*"+"/"    { } /* block comments  */
+[ \t\n]                              { } /* skip whitespace */
 
 if                    { return KW_IF;                 }
 else                  { return KW_ELSE;               }
@@ -31,7 +34,31 @@ static                { return KW_STATIC;             }
 String                { return KW_STRING;             }
 System\.out\.print    { return SYSTEM_OUT_PRINT;      }
 System\.out\.println  { return SYSTEM_OUT_PRINTLN;    }
+Integer\.ParseInt     { return INTEGER_PARSE_INT;     }
 void                  { return KW_VOID;               }
+
+"&&"                  { return TOK_AND;               } /* operators */
+"||"                  { return TOK_OR;                }
+"<"                   { return TOK_LESS;              }
+">"                   { return TOK_GREAT;             }   
+"<="                  { return TOK_LEQ;               }
+">="                  { return TOK_GREQ;              }
+"!="                  { return TOK_NEQ;               }
+"=="                  { return TOK_EQ;                }
+"+"                   { return TOK_PLUS;              }
+"-"                   { return TOK_MINUS;             }
+"*"                   { return TOK_MULT;              }
+"/"                   { return TOK_DIV;               }
+
+\{                    { return *yytext;               } /* other */
+\}                    { return *yytext;               }
+\[                    { return *yytext;               }
+\]                    { return *yytext;               }
+\(                    { return *yytext;               }
+\)                    { return *yytext;               } 
+\=                    { return *yytext;               }
+\;                    { return *yytext;               }
+
 
 [0-9]+ {
     yylval.integer = atoi(strdup(yytext));
@@ -47,8 +74,6 @@ void                  { return KW_VOID;               }
     yylval.string = strdup(yytext);
     return STRING_LITERAL;                    
 }
-
-[ \t\n]               { } /* skip whitespace */
 
 %%
 

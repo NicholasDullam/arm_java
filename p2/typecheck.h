@@ -24,6 +24,7 @@ void checkStatementList(struct ASTNode* statementList);
 
 void checkStaticVarDecl(struct ASTNode* staticVarDecl);
 void checkVarDecl(struct ASTNode* varDecl);
+void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNode* expDecl);
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl);
 void checkStatement(struct ASTNode* statement);
 
