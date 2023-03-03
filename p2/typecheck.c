@@ -6,7 +6,11 @@
 
 int num_errors = 0;
 int num_entries = 0;
+
+// Change the symbol table structure to be more heirarchal
 struct SymbolTableEntry *symbol_table[50];
+struct MethodSymbolTableEntry *symbol_table[50];
+struct LocalSymbolTableEntry *symbol_table[50];
 
 static void report_type_violation(int line_number) {
     fprintf(stderr, "Type Violation in Line %d\n", line_number);
