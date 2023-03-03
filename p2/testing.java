@@ -1,6 +1,6 @@
 class dsafdslk {
+    private static String tesst;
     private static String test;
-    private static String fdsafsd;
 
     public static String[] fdsafds() {
 

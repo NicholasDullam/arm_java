@@ -5,20 +5,17 @@
 #include <stdlib.h>
 
 int num_errors = 0;
-int num_entries = 0;
 
-// Change the symbol table structure to be more heirarchal
-struct SymbolTableEntry *symbol_table[50];
-struct MethodSymbolTableEntry *symbol_table[50];
-struct LocalSymbolTableEntry *symbol_table[50];
+struct ScopeEntry * head = NULL;
 
-static void report_type_violation(int line_number) {
+static void reportTypeViolation(int line_number) {
     fprintf(stderr, "Type Violation in Line %d\n", line_number);
 }
 
 // Begin type checking from root nonterminal
 void checkProgram(struct ASTNode * program) {
-    num_entries = 0;
+    //num_entries = 0;
+    createScope(SCOPETYPE_GLOBAL);
     checkMain(program->children[program->num_children-1]);
 }
 
@@ -26,8 +23,9 @@ void checkProgram(struct ASTNode * program) {
 void checkMain(struct ASTNode * mainClass){
     char * nameOfClass = mainClass -> data.value.string_value;
 
-    checkStaticVarDeclList(mainClass->children[0]);
+    // Call methods first, and skim to handle forward references
     checkStaticMethodDeclList(mainClass->children[1]);
+    checkStaticVarDeclList(mainClass->children[0]);
     checkStatementList(mainClass->children[2]);
 }
 
@@ -106,14 +104,14 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         if (expType != varType) {
             typeViolationExists = true;
-            report_type_violation(varDecl -> line_no);
+            reportTypeViolation(varDecl -> line_no);
         }
 
-        struct SymbolTableEntry * foundEntry = find_symbol(id);
+        struct SymbolTableEntry * foundEntry = searchMethodScope(id);
 
         if (foundEntry) {
             typeViolationExists = true;
-            report_type_violation(varDecl -> line_no);
+            reportTypeViolation(varDecl -> line_no);
             
             if (foundEntry -> type != varType) {
                 foundEntry -> type = DATATYPE_UNDEFINED;
@@ -121,14 +119,14 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
         }
 
         if (!typeViolationExists) {
-            add_to_symbol_table(id, expDecl -> data);
+            addToSymbolTable(id, expDecl -> data);
         }
     } else {
-        struct SymbolTableEntry * foundEntry = find_symbol(id);
+        struct SymbolTableEntry * foundEntry = searchMethodScope(id);
 
         if (foundEntry) {
             typeViolationExists = true;
-            report_type_violation(varDecl -> line_no);
+            reportTypeViolation(varDecl -> line_no);
             
             if (foundEntry -> type != varType) {
                 foundEntry -> type = DATATYPE_UNDEFINED;
@@ -137,14 +135,21 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         if (!typeViolationExists) {
             expDecl -> data.type = DATATYPE_UNDEFINED;
-            add_to_symbol_table(id, expDecl -> data);
+            addToSymbolTable(id, expDecl -> data);
         }
     }
 }
 
 // Check the given static method decl
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
+    struct ASTNode * formalList = staticMethodDecl -> children[1];
     struct ASTNode * statementList = staticMethodDecl -> children[2];
+
+    createScope(SCOPETYPE_METHOD);
+    
+    // Add argument handling here
+
+    createScope(SCOPETYPE_LOCAL);
 
     // TODO (check function symbol table entry and statementlist [maybe return value typing as well])
     checkStatementList(statementList);
@@ -163,24 +168,88 @@ void checkStatement(struct ASTNode* statement){
     }
 }
 
+/*
+    All scope handler functions
+*/
 
+void createScope(enum ScopeType type) {
+    struct ScopeEntry * child = malloc(sizeof(struct ScopeEntry));
+    addChildScope(head, child);
+    child -> parent = head;
+    child -> num_children = 0;
+    child -> num_entries = 0;
+    head = child;
+}
 
+int exitScope() {
+    if (head -> parent) {
+        head = head -> parent;
+        return 0;
+    } else {
+        return -1;
+    }
+}
 
+int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
+    if (!parent) return 0;
+    if (parent -> num_children < MAX_NUM_CHILDREN - 1) {
+        parent -> children[parent -> num_children] = child;
+        parent -> num_children++;
+        return 0;
+    } else {
+        return -1;
+    }
+}
 
+struct SymbolTableEntry * searchLocalScope(char* id) {
+    return findSymbol(head, id);
+}
 
-struct SymbolTableEntry * find_symbol(char* id){
-    for (int i = 0; i < num_entries; ++i) {
-        if(strcmp(id, symbol_table[i]->id) == 0){
-            return symbol_table[i];
+struct SymbolTableEntry * searchMethodScope(char* id) {
+    struct ScopeEntry* curr = head;
+    
+    while (curr && curr -> type != SCOPETYPE_METHOD) {
+        struct SymbolTableEntry* symbol = findSymbol(curr, id);
+        if (symbol) return symbol;
+        curr = curr -> parent;
+    }
+
+    return NULL;
+}
+
+struct SymbolTableEntry * searchGlobalScope(char* id) {
+    struct ScopeEntry* curr = head;
+    
+    while (curr) {
+        struct SymbolTableEntry* symbol = findSymbol(curr, id);
+        if (symbol) return symbol;
+        curr = curr -> parent;
+    }
+
+    return NULL;
+}
+
+/*
+    All symbol table management functions
+*/
+
+struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char * id){
+    for (int i = 0; i < scope -> num_entries; ++i) {
+        if(strcmp(id, scope -> symbol_table[i]->id) == 0){
+            return scope -> symbol_table[i];
         }
     }
     return NULL;
 }
 
-void add_to_symbol_table(char* id, struct SemanticData data){
-    struct SymbolTableEntry* entry = malloc(sizeof(struct SymbolTableEntry));
-    entry->id =id;
-    entry->type = data.type;
-    symbol_table[num_entries] = entry;
-    num_entries++;
+int addToSymbolTable(char * id, struct SemanticData data){
+    if (head -> num_entries < MAX_TABLE_SIZE - 1) {
+        struct SymbolTableEntry* entry = malloc(sizeof(struct SymbolTableEntry));
+        entry->id =id;
+        entry->type = data.type;
+        head -> symbol_table[head -> num_entries] = entry;
+        head -> num_entries++;
+    } else {
+        return -1;
+    }
 }
