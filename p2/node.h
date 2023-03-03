@@ -4,7 +4,15 @@
 
 #include <stdbool.h>
 
-enum DataType { DATATYPE_UNDEFINED, DATATYPE_STR, DATATYPE_INT, DATATYPE_BOOLEAN };
+enum DataType { 
+    DATATYPE_UNDEFINED, 
+    DATATYPE_STR, 
+    DATATYPE_INT, 
+    DATATYPE_BOOLEAN,
+    DATATYPE_STRARR,
+    DATATYPE_INTARR,
+    DATATYPE_BOOLARR 
+};
 
 // Returns the name of the given data type.
 static inline const char *type_string(enum DataType t) {

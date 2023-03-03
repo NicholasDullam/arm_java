@@ -13,23 +13,24 @@ static void reportTypeViolation(int line_number) {
 }
 
 // Begin type checking from root nonterminal
-void checkProgram(struct ASTNode * program) {
-    //num_entries = 0;
+void checkProgram(struct ASTNode* program) {
     createScope(SCOPETYPE_GLOBAL);
     checkMain(program->children[program->num_children-1]);
 }
 
 // Check the main nonterminal 
-void checkMain(struct ASTNode * mainClass){
-    char * nameOfClass = mainClass -> data.value.string_value;
-
+void checkMain(struct ASTNode* mainClass){
+    char * argName = mainClass -> data.value.string_value;
+    
+    // May separate main function from class so ID is properly reflected
+    
     // Run through static methods for forward references first
 
     checkStaticVarDeclList(mainClass->children[0]);
     checkStaticMethodDeclList(mainClass->children[1]);
 
     createScope(SCOPETYPE_METHOD);
-    // Check general args here;
+    //addToSymbolTable(argName, mainClass -> data); // note we need to handle index typing
     createScope(SCOPETYPE_LOCAL);
 
     checkStatementList(mainClass->children[2]);
@@ -106,6 +107,9 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
     if (expDeclType != NODETYPE_NULLABLE) {
         struct ASTNode * exp = expDecl -> children[0];
+
+        // may need to check expression here so that type is reflective of the final result
+
         enum DataType expType = exp -> data.type;
 
         if (expType != varType) {
@@ -125,7 +129,7 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
         }
 
         if (!typeViolationExists) {
-            addToSymbolTable(id, expDecl -> data);
+            addToSymbolTable(id, ENTRYTYPE_VAR, expDecl -> data.type, expDecl -> data);
         }
     } else {
         struct SymbolTableEntry * foundEntry = searchMethodScope(id);
@@ -141,9 +145,14 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         if (!typeViolationExists) {
             expDecl -> data.type = DATATYPE_UNDEFINED;
-            addToSymbolTable(id, expDecl -> data);
+            addToSymbolTable(id, ENTRYTYPE_VAR, expDecl -> data.type, expDecl -> data);
         }
     }
+}
+
+// Check the given expression
+void checkExp(struct ASTNode* exp) {
+
 }
 
 // Check the given static method decl
@@ -251,14 +260,16 @@ struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char * id){
     return NULL;
 }
 
-int addToSymbolTable(char * id, struct SemanticData data){
+struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum DataType data_type, struct SemanticData data){
     if (head -> num_entries < MAX_TABLE_SIZE - 1) {
         struct SymbolTableEntry* entry = malloc(sizeof(struct SymbolTableEntry));
-        entry->id =id;
-        entry->type = data.type;
+        entry -> id = id;
+        entry -> type = type;
+        entry -> type = data_type;
         head -> symbol_table[head -> num_entries] = entry;
         head -> num_entries++;
+        return entry;
     } else {
-        return -1;
+        return NULL;
     }
 }

@@ -3,9 +3,9 @@ class dsafdslk {
     private static String test;
 
     public static String[] fdsafds() {
-        String test;
+        String test = "test";
     }
     public static void main (String [] args) {
-        String test;
+        //String test = args;
     }
 }

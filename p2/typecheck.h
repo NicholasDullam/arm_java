@@ -1,16 +1,37 @@
 #ifndef TYPE_CHECK_H
 #define TYPE_CHECK_H
+
 #define MAX_SCOPED_CHILDREN 10
 #define MAX_TABLE_SIZE 50
+#define MAX_ARGUMENTS 10
 
 #include "node.h"
 
 enum ScopeType { SCOPETYPE_GLOBAL, SCOPETYPE_METHOD, SCOPETYPE_LOCAL };
+enum EntryType { ENTRYTYPE_CLASS, ENTRYTYPE_METHOD, ENTRYTYPE_VAR };
+
+/*
+    Each symbol table entry should include the type
+    of entry (i.e. class, method, variable...) alongside the
+    intended data type. If the entry is a function, the arg_types
+    may be used -- an array of data types for method call verification.
+*/
 
 struct SymbolTableEntry {
     char * id;
-    enum DataType type;
+    int length;
+    int arg_length;
+    enum EntryType type;
+    enum DataType data_type;
+    enum DataType arg_types[MAX_ARGUMENTS];
 };
+
+/*
+    Scope entries act as a tree of scope permissions, opting
+    to memoize the entire state, rather than destroying scopes after
+    escaping. Each scope has a specified type, reserving the level of 
+    permissions for overriding pre-existing variables.
+*/
 
 struct ScopeEntry {
     enum ScopeType type;
@@ -21,7 +42,10 @@ struct ScopeEntry {
     int num_entries;
 };
 
-// Create a new scope
+/*
+    All scope handler functions
+*/
+
 void createScope(enum ScopeType type);
 int addChildScope(struct ScopeEntry* parent, struct ScopeEntry * child);
 int exitScope();
@@ -30,12 +54,16 @@ struct SymbolTableEntry * searchLocalScope(char* id);
 struct SymbolTableEntry * searchMethodScope(char* id);
 struct SymbolTableEntry * searchGlobalScope(char* id);
 
-// Adds an entry to the symbol table.
-int addToSymbolTable(char* id, struct SemanticData SemanticData);
+/*
+    All symbol-table handler functions
+*/
 
-// Looks for an entry in the symbol table with the given name.
-// Returns NULL if there is no such entry.
+struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum DataType data_type, struct SemanticData data);
 struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char* id);
+
+/*
+    All type-checking handler functions
+*/
 
 void checkProgram(struct ASTNode* program);
 void checkMain(struct ASTNode* mainClass);
@@ -49,6 +77,7 @@ void checkVarDecl(struct ASTNode* varDecl);
 void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNode* expDecl);
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl);
 void checkFormalList(struct ASTNode* formalList);
+void checkExp(struct ASTNode* exp);
 void checkStatement(struct ASTNode* statement);
 
 extern int num_errors;
