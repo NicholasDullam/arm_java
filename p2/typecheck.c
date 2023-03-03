@@ -155,6 +155,18 @@ void checkExp(struct ASTNode* exp) {
 
 }
 
+// Check a given method call
+void checkMethodCall(struct ASTNode* methodCall) {
+    char * methodName = methodCall -> data.value.string_value;
+    struct SymbolTableEntry * method = searchGlobalScope(methodName);
+    
+    if (!method || method -> type != ENTRYTYPE_METHOD) {
+        reportTypeViolation(methodCall -> line_no);
+    } else {
+        // handle other method call and exp handling
+    }
+}
+
 // Check the given static method decl
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
     struct ASTNode * formalList = staticMethodDecl -> children[1];

@@ -74,10 +74,12 @@ void checkStatementList(struct ASTNode* statementList);
 
 void checkStaticVarDecl(struct ASTNode* staticVarDecl);
 void checkVarDecl(struct ASTNode* varDecl);
+void checkMethodCall(struct ASTNode* methodCall);
 void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNode* expDecl);
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl);
 void checkFormalList(struct ASTNode* formalList);
 void checkExp(struct ASTNode* exp);
+void checkIndex(struct ASTNode* exp);
 void checkStatement(struct ASTNode* statement);
 
 extern int num_errors;
