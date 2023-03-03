@@ -53,6 +53,10 @@ struct ASTNode* root;
 
 %%
 
+/*
+    All root grammars
+*/
+
 Program:                
     MainClass {   
         $$ = new_node(NODETYPE_PROGRAM, yylineno);
@@ -68,6 +72,8 @@ MainClass:
     {
         $$ = new_node(NODETYPE_MAINCLASS, yylineno);
         set_string_value($$, $2);
+        add_child($$, $4);
+        //add_child($$, $5);
         add_child($$, $16);
     };
 
@@ -76,20 +82,18 @@ MainClass:
 */
 
 VarDecl:
-    Type ID '=' Exp ';' {
+    Type ID ExpDecl VarDeclExpList ';' {
         $$ = new_node(NODETYPE_VARDECL, yylineno);
         set_string_value($$, $2);
         add_child($$, $1);
+        add_child($$, $3);
         add_child($$, $4);
     };
 
 StaticVarDecl:
-    KW_PRIVATE KW_STATIC Type ID ExpDecl VarDeclExpList ';' {
+    KW_PRIVATE KW_STATIC VarDecl {
         $$ = new_node(NODETYPE_STATICVARDECL, yylineno);
-        set_string_value($$, $4);
         add_child($$, $3);
-        add_child($$, $5);
-        add_child($$, $6);
     }
 
 StaticVarDeclList:
@@ -207,7 +211,12 @@ MethodCall:
 StaticMethodDecl:
     KW_PUBLIC KW_STATIC Type ID '(' FormalList ')' '{'
         StatementList
-    '}'
+    '}' {
+        $$ = new_node(NODETYPE_STATICMETHODDECL, yylineno);
+        set_string_value($$, $4);
+        add_child($$, $6);
+        add_child($$, $8);
+    }
 
 FormalList:
 

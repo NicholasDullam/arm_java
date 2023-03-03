@@ -27,6 +27,11 @@ void checkMain(struct ASTNode * mainClass){
     checkStatementList(mainClass->children[2]);
 }
 
+
+
+
+
+
 // Check the available static var decl lists (nullable)
 void checkStaticVarDeclList(struct ASTNode* staticVarDeclList) {
     enum NodeType staticVarDeclListType = staticVarDeclList -> node_type;
@@ -35,7 +40,7 @@ void checkStaticVarDeclList(struct ASTNode* staticVarDeclList) {
     struct ASTNode * staticVarDecl = staticVarDeclList -> children[0];
     struct ASTNode * nextStaticVarDeclList = staticVarDeclList -> children[1];
 
-    // check ind vardecl
+    checkStaticVarDecl(staticVarDecl);
     checkStaticVarDeclList(nextStaticVarDeclList);
 }
 
@@ -47,8 +52,8 @@ void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
     struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[0];
     struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[1];
 
-    // check ind methoddecl
-    checkStaticVarDeclList(nextStaticMethodDeclList);
+    checkStaticMethodDecl(staticMethodDecl);
+    checkStaticMethodDeclList(nextStaticMethodDeclList);
 }
 
 // Check the available statement lists (nullable)
@@ -63,9 +68,57 @@ void checkStatementList(struct ASTNode* statementList) {
     checkStatementList(nextStatementList);
 }
 
+
+
+
+
+
 // Check the given static var decl
 void checkStaticVarDecl(struct ASTNode* staticVarDecl) {
-    // TODO
+    struct ASTNode * varDecl = staticVarDecl -> children[0];
+    checkVarDecl(varDecl);
+}
+
+void checkVarDecl(struct ASTNode* varDecl) {
+    enum DataType varType = varDecl -> children[0] -> data.type;
+    char * id = varDecl -> data.value.string_value;
+
+    struct ASTNode * expDecl = varDecl -> children[1];
+    struct ASTNode * expList = varDecl -> children[2];
+    
+    enum NodeType expDeclType = expDecl -> node_type;
+    enum NodeType expListType = expList -> node_type;
+
+    // Handle base logic, then go through existing list of expressions
+    if (expDeclType == NODETYPE_NULLABLE) {
+        bool typeViolationExists = false;
+        struct ASTNode * exp = expDecl -> children[0];
+        enum DataType expType = exp -> data.type;
+
+        if (expType != varType) {
+            typeViolationExists = true;
+            report_type_violation(varDecl->line_no);
+        }
+
+        struct SymbolTableEntry * foundEntry = find_symbol(id);
+
+        if (foundEntry) {
+            typeViolationExists = true;
+            report_type_violation(varDecl->line_no);
+            
+            if (foundEntry -> type != varType) {
+                foundEntry -> type = DATATYPE_UNDEFINED;
+            }
+        }
+
+        if (!typeViolationExists) {
+            add_to_symbol_table(id, expDecl -> data);
+        }
+    } // handle when expDecl is not nullable
+    
+    while (expListType != NODETYPE_NULLABLE) {
+        // handle checking the remainder of the expList
+    }
 }
 
 // Check the given static method decl
@@ -87,29 +140,36 @@ void checkStatement(struct ASTNode* statement){
         char * id = varDecl->data.value.string_value;
         
         bool type_violation_exists = false;
-        // Reports an error if the variable initializer expression has a
-        // different type.
+
+        // Reports an error if the variable initializer expression has a different type
         if (var_type == expr_type) {
             type_violation_exists = true;
-            report_type_violation(/*TODO*/-1);
+            report_type_violation(varDecl->line_no);
         }
-        // Reports an error if the declared variable is declared before (i.e.,
-        // already exists in the symbol table).
+
+        // Reports an error if the declared variable is declared before
         struct SymbolTableEntry * found_entry = find_symbol(id);
         if (found_entry != NULL) {
             type_violation_exists = true;
-            report_type_violation(/*TODO*/-1);
+            report_type_violation(varDecl->line_no);
             
             // Changes the type of the variable to undefined, unless the 
             // redefinition is the same type as the existing one.
             if (found_entry->type != var_type) 
                 found_entry->type = DATATYPE_UNDEFINED;
         }
+
+        // If no error is reported, add the variable declaration to the symbol table
         if (!type_violation_exists) {
             add_to_symbol_table(id, varDecl->children[1]->data);
         };
     }
 }
+
+
+
+
+
 
 struct SymbolTableEntry * find_symbol(char* id){
     for (int i = 0; i < num_entries; ++i) {

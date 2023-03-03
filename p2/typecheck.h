@@ -23,6 +23,7 @@ void checkStaticMethodDeclList(struct ASTNode* staticMethodDeclList);
 void checkStatementList(struct ASTNode* statementList);
 
 void checkStaticVarDecl(struct ASTNode* staticVarDecl);
+void checkVarDecl(struct ASTNode* varDecl);
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl);
 void checkStatement(struct ASTNode* statement);
 
