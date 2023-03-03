@@ -23,9 +23,15 @@ void checkProgram(struct ASTNode * program) {
 void checkMain(struct ASTNode * mainClass){
     char * nameOfClass = mainClass -> data.value.string_value;
 
-    // Call methods first, and skim to handle forward references
-    checkStaticMethodDeclList(mainClass->children[1]);
+    // Run through static methods for forward references first
+
     checkStaticVarDeclList(mainClass->children[0]);
+    checkStaticMethodDeclList(mainClass->children[1]);
+
+    createScope(SCOPETYPE_METHOD);
+    // Check general args here;
+    createScope(SCOPETYPE_LOCAL);
+
     checkStatementList(mainClass->children[2]);
 }
 
@@ -146,13 +152,15 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
     struct ASTNode * statementList = staticMethodDecl -> children[2];
 
     createScope(SCOPETYPE_METHOD);
-    
-    // Add argument handling here
-
+    checkFormalList(formalList);
     createScope(SCOPETYPE_LOCAL);
 
     // TODO (check function symbol table entry and statementlist [maybe return value typing as well])
     checkStatementList(statementList);
+}
+
+void checkFormalList(struct ASTNode* formalList) {
+
 }
 
 // Check the given statement
@@ -176,6 +184,7 @@ void createScope(enum ScopeType type) {
     struct ScopeEntry * child = malloc(sizeof(struct ScopeEntry));
     addChildScope(head, child);
     child -> parent = head;
+    child -> type = type;
     child -> num_children = 0;
     child -> num_entries = 0;
     head = child;
