@@ -122,8 +122,8 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
             typeViolationExists = true;
             reportTypeViolation(varDecl -> line_no);
             
-            if (foundEntry -> type != varType) {
-                foundEntry -> type = DATATYPE_UNDEFINED;
+            if (foundEntry -> data_type != varType) {
+                foundEntry -> data_type = DATATYPE_UNDEFINED;
             }
         }
 
@@ -137,8 +137,8 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
             typeViolationExists = true;
             reportTypeViolation(varDecl -> line_no);
             
-            if (foundEntry -> type != varType) {
-                foundEntry -> type = DATATYPE_UNDEFINED;
+            if (foundEntry -> data_type != varType) {
+                foundEntry -> data_type = DATATYPE_UNDEFINED;
             }
         }
 
@@ -363,7 +363,7 @@ struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum 
         struct SymbolTableEntry* entry = malloc(sizeof(struct SymbolTableEntry));
         entry -> id = id;
         entry -> type = type;
-        entry -> type = data_type;
+        entry -> data_type = data_type;
         head -> symbol_table[head -> num_entries] = entry;
         head -> num_entries++;
         return entry;

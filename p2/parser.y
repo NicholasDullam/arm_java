@@ -124,7 +124,7 @@ VarDeclExpList:
     };
 
 /*
-    All statement based grammars
+    All statement-based grammars
 */
 
 Statement:              
@@ -177,7 +177,7 @@ Index:
     };
 
 /*
-    All typing related grammars
+    All typing-based grammars
 */
 
 Type: 
@@ -207,7 +207,7 @@ PrimeType:
     };  
 
 /*
-    All method based grammars
+    All method-based grammars
 */
 
 MethodCall:
@@ -269,7 +269,7 @@ ArgList:
     };
 
 /*
-    All expression based grammars
+    All expression-based grammars
 */
 
 Exp:  
