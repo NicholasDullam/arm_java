@@ -107,8 +107,7 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
     if (expDeclType != NODETYPE_NULLABLE) {
         struct ASTNode * exp = expDecl -> children[0];
-
-        // may need to check expression here so that type is reflective of the final result
+        checkExp(exp);
 
         enum DataType expType = exp -> data.type;
 
@@ -131,7 +130,7 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
         if (!typeViolationExists) {
             addToSymbolTable(id, ENTRYTYPE_VAR, expDecl -> data.type, expDecl -> data);
         }
-    } else {
+    } else if (expDeclType == NODETYPE_EXPDECL) {
         struct SymbolTableEntry * foundEntry = searchMethodScope(id);
 
         if (foundEntry) {
@@ -152,18 +151,36 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
 // Check the given expression
 void checkExp(struct ASTNode* exp) {
+    enum NodeType expType = exp -> node_type;
+    if (expType == NODETYPE_LITERAL) {
+        return;
+    } else if (expType == NODETYPE_LEFTVALUE) {
+        struct ASTNode * leftValue = exp -> children[0];
+        checkLeftValue(leftValue);
+        // Handle type changes for current expression node
+    } else if (expType == NODETYPE_LENGTH) {
 
+    } else if (expType == NODETYPE_METHODCALL) {
+        struct ASTNode * methodCall = exp -> children[0];
+        checkMethodCall(methodCall);
+        // Handle type changes for current expression node
+    }
 }
 
 // Check a given method call
 void checkMethodCall(struct ASTNode* methodCall) {
     char * methodName = methodCall -> data.value.string_value;
+    enum NodeType methodCallType = methodCall -> node_type;
     struct SymbolTableEntry * method = searchGlobalScope(methodName);
     
-    if (!method || method -> type != ENTRYTYPE_METHOD) {
-        reportTypeViolation(methodCall -> line_no);
-    } else {
-        // handle other method call and exp handling
+    if (methodCallType == NODETYPE_METHODCALL) {
+        if (!method || method -> type != ENTRYTYPE_METHOD) {
+            reportTypeViolation(methodCall -> line_no);
+        }
+
+        // handle other method call and exp handling (alongside type changes for the parent methodCall)
+    } else if (methodCallType == NODETYPE_PARSEINT) {
+        
     }
 }
 
@@ -172,16 +189,82 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
     struct ASTNode * formalList = staticMethodDecl -> children[1];
     struct ASTNode * statementList = staticMethodDecl -> children[2];
 
+    // TODO add method to global scope
+
     createScope(SCOPETYPE_METHOD);
-    checkFormalList(formalList);
     createScope(SCOPETYPE_LOCAL);
 
     // TODO (check function symbol table entry and statementlist [maybe return value typing as well])
+
     checkStatementList(statementList);
 }
 
 void checkFormalList(struct ASTNode* formalList) {
 
+}
+
+void checkIndex(struct ASTNode* index) {
+    enum NodeType indexType = index -> node_type;
+    if (indexType == NODETYPE_INDEXLIST) {
+        struct ASTNode * newIndex = index -> children[0];
+        struct ASTNode * exp = index -> children[1];
+        
+        checkIndex(newIndex);
+        checkExp(exp);
+        
+        enum DataType expType = exp -> data.type;
+        if (expType != DATATYPE_INT) {
+            reportTypeViolation(exp -> line_no);
+        }
+    } else if (indexType == NODETYPE_INDEX) {
+        struct ASTNode * exp = index -> children[0];
+        
+        checkExp(exp);
+
+        enum DataType expType = exp -> data.type;
+        if (expType != DATATYPE_INT) {
+            reportTypeViolation(exp -> line_no);
+        }
+    }
+}
+
+void checkLeftValue(struct ASTNode* leftValue) {
+    enum NodeType leftValueType = leftValue -> node_type;
+    bool typeViolationExists = false;
+
+    if (leftValueType == NODETYPE_LEFTVALUE) {
+        char * leftValueName = leftValue -> data.value.string_value;
+        struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValueName);
+        
+        if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) {
+            typeViolationExists = true;
+            reportTypeViolation(leftValue -> line_no);
+        }
+        
+        if (!typeViolationExists) {
+            leftValue -> data.type = foundEntry -> data_type;
+        }
+    } else if (leftValueType == NODETYPE_LEFTVALUEINDEX) {
+        char * leftValueName = leftValue -> data.value.string_value;
+        struct ASTNode * index = leftValue -> children[0];
+        struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValueName);
+        
+        if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) {
+            typeViolationExists = true;
+            reportTypeViolation(leftValue -> line_no);
+        } else {
+            if (foundEntry -> data_type != DATATYPE_INTARR || foundEntry -> data_type != DATATYPE_STRARR || foundEntry -> data_type != DATATYPE_BOOLARR) {
+                typeViolationExists = true;
+                reportTypeViolation(leftValue -> line_no);
+            }
+        }
+
+        checkIndex(index);
+
+        if (!typeViolationExists) {
+            leftValue -> data.type = foundEntry -> data_type;
+        }
+    }
 }
 
 // Check the given statement
@@ -194,6 +277,9 @@ void checkStatement(struct ASTNode* statement){
     } else if (statementType == NODETYPE_VARDECL) {
         struct ASTNode * varDecl = statement -> children[0];
         checkVarDecl(varDecl);
+    } else if (statementType == NODETYPE_METHODCALL) {
+        struct ASTNode * methodCall = statement -> children[0];
+        checkMethodCall(methodCall);
     }
 }
 

@@ -31,7 +31,7 @@ struct ASTNode* root;
 // These keyword-like tokens doesn't need to have a semantic value.
 
 %token TOK_AND TOK_OR TOK_LESS TOK_GREAT TOK_LEQ TOK_GREQ TOK_NEQ
-%token TOK_EQ TOK_PLUS TOK_MINUS TOK_MULT TOK_DIV
+%token TOK_EQ TOK_PLUS TOK_MINUS TOK_MULT TOK_DIV TOK_NOT
 
 %token KW_BOOLEAN KW_CLASS KW_FALSE KW_INT MAIN KW_PUBLIC KW_TRUE KW_VOID 
 %token KW_IF KW_ELSE KW_RETURN KW_WHILE KW_LENGTH KW_STATIC KW_STRING 
@@ -45,7 +45,7 @@ struct ASTNode* root;
 // Left hand non-terminals. They are all associated to the `node` variant
 // declared in the %union section, which is of type `ASTNode *`.
 
-%type <node> Program MainClass VarDecl Statement Exp ExpList FormalList Arg ArgList
+%type <node> Program MainClass VarDecl Statement Exp ExpList FormalList Arg ArgList Factor Term
 %type <node> ExpTail ExpDecl Type PrimeType LeftValue Index MethodCall StatementList
 %type <node> StaticVarDecl StaticVarDeclList StaticMethodDecl StaticMethodDeclList VarDeclExpList 
 
@@ -100,7 +100,7 @@ StaticVarDecl:
     KW_PRIVATE KW_STATIC VarDecl {
         $$ = new_node(NODETYPE_STATICVARDECL, yylineno);
         add_child($$, $3);
-    }
+    };
 
 StaticVarDeclList:
     StaticVarDeclList StaticVarDecl {
@@ -110,7 +110,7 @@ StaticVarDeclList:
     }
     | {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    }
+    };
 
 VarDeclExpList:
     ',' ID ExpDecl VarDeclExpList {
@@ -121,7 +121,7 @@ VarDeclExpList:
     }
     |  {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    }
+    };
 
 /*
     All statement based grammars
@@ -139,6 +139,10 @@ Statement:
     | SYSTEM_OUT_PRINT '(' Exp ')' ';' {
         $$ = new_node(NODETYPE_STATEMENT, yylineno);
         add_child($$, $3);
+    }
+    | MethodCall {
+        $$ = new_node(NODETYPE_METHODCALL, yylineno);
+        add_child($$, $1);
     };
 
 StatementList:
@@ -149,17 +153,16 @@ StatementList:
     }
     | {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    }
+    };
 
 LeftValue:
     ID {
         $$ = new_node(NODETYPE_LEFTVALUE, yylineno);
         set_string_value($$, $1);
     }
-    | LeftValue '[' Exp ']' {
-        $$ = new_node(NODETYPE_LEFTVALUE, yylineno);
-        add_child($$, $1);
-        add_child($$, $3);
+    | ID Index {
+        $$ = new_node(NODETYPE_LEFTVALUEINDEX, yylineno);
+        add_child($$, $2);
     };
 
 Index: 
@@ -168,7 +171,7 @@ Index:
         add_child($$, $2);
     }
     | Index '[' Exp ']' {
-        $$ = new_node(NODETYPE_INDEX, yylineno);
+        $$ = new_node(NODETYPE_INDEXLIST, yylineno);
         add_child($$, $1);
         add_child($$, $3);
     };
@@ -212,7 +215,11 @@ MethodCall:
         $$ = new_node(NODETYPE_METHODCALL, yylineno);
         set_string_value($$, $1);
         add_child($$, $3);
-    };     
+    }
+    | INTEGER_PARSE_INT '(' Exp ')' {
+        $$ = new_node(NODETYPE_PARSEINT, yylineno);
+        add_child($$, $3);
+    };    
 
 StaticMethodDecl:
     KW_PUBLIC KW_STATIC Type ID '(' FormalList ')' '{'
@@ -223,7 +230,7 @@ StaticMethodDecl:
         add_child($$, $3);
         add_child($$, $6);
         add_child($$, $9);
-    }
+    };
 
 StaticMethodDeclList:
     StaticMethodDeclList StaticMethodDecl {
@@ -233,7 +240,7 @@ StaticMethodDeclList:
     }
     | {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    }
+    };
 
 FormalList:
     ArgList Arg {
@@ -243,13 +250,13 @@ FormalList:
     }
     | {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    } 
+    };
 
 Arg:
     Type ID {
         $$ = new_node(NODETYPE_ARG, yylineno);
         set_string_value($$, $2);
-    }
+    };
 
 ArgList:
     ',' Arg ArgList {
@@ -259,52 +266,152 @@ ArgList:
     }
     | {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    }
+    };
 
 /*
     All expression based grammars
 */
 
-Exp:                    
+Exp:  
+    Exp TOK_PLUS Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_MINUS Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);        
+        // fill out other semantics
+    }
+    | Exp TOK_AND Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_OR Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_LESS Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_GREAT Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_LEQ Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_GREQ Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_EQ Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Exp TOK_NEQ Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | TOK_NOT Factor {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $2);
+        // fill out other semantics
+    }
+    | TOK_PLUS Factor {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $2);
+        // fill out other semantics
+    }
+    | TOK_MINUS Factor {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $2);
+        // fill out other semantics
+    }
+    | Term {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        // fill out other semantics
+    };
+
+Term:
+    Term TOK_MULT Factor {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Term TOK_DIV Factor {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+        // fill out other semantics
+    }
+    | Factor {
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        add_child($$, $1);
+        // fill out other semantics
+    };
+
+Factor:
     INTEGER_LITERAL {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
         set_int_value($$, $1);
     }
     | STRING_LITERAL {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
         set_string_value($$, $1);
     }
     | KW_TRUE {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
         set_boolean_value($$, true);
     }
     | KW_FALSE {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_LITERAL, yylineno);
         set_boolean_value($$, false);
     }
     | '(' Exp ')' {
         $$ = new_node(NODETYPE_EXP, yylineno);
-        $$ -> data.type = $2 -> data.type;
+        //$$ -> data.type = $2 -> data.type;
         add_child($$, $2);
     }
     | LeftValue {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_LEFTVALUE, yylineno);
         add_child($$, $1);
     } 
     | LeftValue '.' KW_LENGTH {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_LENGTH, yylineno);
         add_child($$, $1);
     }
     | MethodCall {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_METHODCALL, yylineno);
         add_child($$, $1);
     }
     | KW_NEW PrimeType Index {
-        $$ = new_node(NODETYPE_EXP, yylineno);
+        $$ = new_node(NODETYPE_ARRAY, yylineno);
         add_child($$, $2);
         add_child($$, $3);
-    }
-    ;
+    };
 
 ExpDecl:
     '=' Exp {
@@ -313,7 +420,7 @@ ExpDecl:
     }
     | {
         $$ = new_node(NODETYPE_NULLABLE, yylineno);
-    }
+    };
 
 ExpList:
     Exp ExpTail {

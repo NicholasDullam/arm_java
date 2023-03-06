@@ -20,7 +20,7 @@ extern int yylex();
 "/*"([^\*]|("*"+[^\/\*]))*"*"+"/"    { } /* block comments  */
 [ \t\n]                              { } /* skip whitespace */
 
-if                    { return KW_IF;                 }
+if                    { return KW_IF;                 } /* keywords */
 else                  { return KW_ELSE;               }
 new                   { return KW_NEW;                }
 boolean               { return KW_BOOLEAN;            }
@@ -49,6 +49,7 @@ void                  { return KW_VOID;               }
 "-"                   { return TOK_MINUS;             }
 "*"                   { return TOK_MULT;              }
 "/"                   { return TOK_DIV;               }
+"!"                   { return TOK_NOT;               }
 
 \{                    { return *yytext;               } /* other */
 \}                    { return *yytext;               }
@@ -58,6 +59,7 @@ void                  { return KW_VOID;               }
 \)                    { return *yytext;               } 
 \=                    { return *yytext;               }
 \;                    { return *yytext;               }
+\,                    { return *yytext;               }
 
 
 [0-9]+ {

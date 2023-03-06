@@ -19,8 +19,8 @@ enum EntryType { ENTRYTYPE_CLASS, ENTRYTYPE_METHOD, ENTRYTYPE_VAR };
 
 struct SymbolTableEntry {
     char * id;
-    int length;
-    int arg_length;
+    int length;                               // used to represent the length of an array datatype
+    int arg_length;                           // used to represent the length of the arguments array
     enum EntryType type;
     enum DataType data_type;
     enum DataType arg_types[MAX_ARGUMENTS];
@@ -79,7 +79,8 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl);
 void checkFormalList(struct ASTNode* formalList);
 void checkExp(struct ASTNode* exp);
-void checkIndex(struct ASTNode* exp);
+void checkIndex(struct ASTNode* index);
+void checkLeftValue(struct ASTNode* leftValue);
 void checkStatement(struct ASTNode* statement);
 
 extern int num_errors;
