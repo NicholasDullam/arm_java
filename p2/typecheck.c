@@ -23,16 +23,22 @@ void checkMain(struct ASTNode* mainClass){
     char * argName = mainClass -> data.value.string_value;
     // May separate main function from class so ID is properly reflected
     
+    // Create method forward references (including main)
     createMethodForwardReferences(mainClass->children[1]);
-    //addToSymbolTable(argName, mainClass -> data); // note we need to handle index typing
+    struct SymbolTableEntry * mainMethodEntry = addToSymbolTable("main", ENTRYTYPE_METHOD, DATATYPE_UNDEFINED, mainClass -> data);
+    mainMethodEntry -> args[0] = createArgument(argName, DATATYPE_STR, 1);
+    mainMethodEntry -> num_args = 1;
 
+    // Check static variable and method declaration
     checkStaticVarDeclList(mainClass->children[0]);
     checkStaticMethodDeclList(mainClass->children[1]);
 
+    // Change of scope before evaluating the main function, and inclusion of argument
     createScope(SCOPETYPE_METHOD);
-    //addToSymbolTable(argName, mainClass -> data); // note we need to handle index typing
+    addToSymbolTable(mainMethodEntry-> args[0] -> id, ENTRYTYPE_VAR, mainMethodEntry-> args[0] -> data_type, mainClass -> data); // make sure to change so we can include num_indices
     createScope(SCOPETYPE_LOCAL);
 
+    // Check the statements of the main function
     checkStatementList(mainClass->children[2]);
 }
 
