@@ -5,8 +5,9 @@
 struct ASTNode* new_node(enum NodeType t, int line_no){
     struct ASTNode* ast_node = malloc(sizeof(struct ASTNode));
     memset(ast_node, 0, sizeof(struct ASTNode));
-    ast_node->node_type = t;
-    ast_node->line_no = line_no;
+    ast_node -> node_type = t;
+    ast_node -> data.line_no = line_no;
+    ast_node -> data.num_indices = 0;
     return ast_node;
 }
 

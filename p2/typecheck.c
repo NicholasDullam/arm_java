@@ -21,10 +21,10 @@ void checkProgram(struct ASTNode* program) {
 // Check the main nonterminal 
 void checkMain(struct ASTNode* mainClass){
     char * argName = mainClass -> data.value.string_value;
-    
     // May separate main function from class so ID is properly reflected
     
-    // Run through static methods for forward references first
+    createMethodForwardReferences(mainClass->children[1]);
+    //addToSymbolTable(argName, mainClass -> data); // note we need to handle index typing
 
     checkStaticVarDeclList(mainClass->children[0]);
     checkStaticMethodDeclList(mainClass->children[1]);
@@ -34,6 +34,43 @@ void checkMain(struct ASTNode* mainClass){
     createScope(SCOPETYPE_LOCAL);
 
     checkStatementList(mainClass->children[2]);
+}
+
+void createMethodForwardReferences(struct ASTNode* staticMethodDeclList) {
+    enum NodeType staticMethodDeclListType = staticMethodDeclList -> node_type;
+    if (staticMethodDeclListType == NODETYPE_NULLABLE) return;
+    
+    struct ASTNode * nextStaticMethodDeclList = staticMethodDeclList -> children[0];
+    struct ASTNode * staticMethodDecl = staticMethodDeclList -> children[1];
+
+    createMethodForwardReference(staticMethodDecl);
+    createMethodForwardReferences(nextStaticMethodDeclList);
+}
+
+void createMethodForwardReference(struct ASTNode* staticMethodDecl) {
+    struct ASTNode * type = staticMethodDecl -> children[0];
+    struct ASTNode * formalList = staticMethodDecl -> children[1];
+    char * id = staticMethodDecl -> data.value.string_value;
+    enum DataType dataType = type -> data.type;
+
+    // Create symbol table entry
+    struct SymbolTableEntry * entry = addToSymbolTable(id, ENTRYTYPE_METHOD, dataType, staticMethodDecl -> data);
+
+    // Evaluate the formal list arguments
+    if (formalList -> node_type != NODETYPE_NULLABLE) {
+        struct ASTNode * arg = formalList -> children[0];
+        struct ASTNode * argList = formalList -> children[1];
+
+        // Navigate through arg_list adding arguments to entry
+        while (arg) { 
+            struct ASTNode * argType = arg -> children[0];
+            entry -> args[entry -> num_args] = createArgument(arg -> data.value.string_value, argType -> data.type, arg -> data.num_indices);
+            entry -> num_args++;
+            if (argList -> node_type == NODETYPE_NULLABLE) break;
+            arg = argList -> children[0];
+            argList = argList -> children[1];
+        }
+    }
 }
 
 // Check the available static var decl lists (nullable)
@@ -113,14 +150,14 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         if (expType != varType) {
             typeViolationExists = true;
-            reportTypeViolation(varDecl -> line_no);
+            reportTypeViolation(varDecl -> data.line_no);
         }
 
         struct SymbolTableEntry * foundEntry = searchMethodScope(id);
 
         if (foundEntry) {
             typeViolationExists = true;
-            reportTypeViolation(varDecl -> line_no);
+            reportTypeViolation(varDecl -> data.line_no);
             
             if (foundEntry -> data_type != varType) {
                 foundEntry -> data_type = DATATYPE_UNDEFINED;
@@ -135,7 +172,7 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         if (foundEntry) {
             typeViolationExists = true;
-            reportTypeViolation(varDecl -> line_no);
+            reportTypeViolation(varDecl -> data.line_no);
             
             if (foundEntry -> data_type != varType) {
                 foundEntry -> data_type = DATATYPE_UNDEFINED;
@@ -175,7 +212,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
     
     if (methodCallType == NODETYPE_METHODCALL) {
         if (!method || method -> type != ENTRYTYPE_METHOD) {
-            reportTypeViolation(methodCall -> line_no);
+            reportTypeViolation(methodCall -> data.line_no);
         }
 
         // handle other method call and exp handling (alongside type changes for the parent methodCall)
@@ -214,7 +251,7 @@ void checkIndex(struct ASTNode* index) {
         
         enum DataType expType = exp -> data.type;
         if (expType != DATATYPE_INT) {
-            reportTypeViolation(exp -> line_no);
+            reportTypeViolation(exp -> data.line_no);
         }
     } else if (indexType == NODETYPE_INDEX) {
         struct ASTNode * exp = index -> children[0];
@@ -223,7 +260,7 @@ void checkIndex(struct ASTNode* index) {
 
         enum DataType expType = exp -> data.type;
         if (expType != DATATYPE_INT) {
-            reportTypeViolation(exp -> line_no);
+            reportTypeViolation(exp -> data.line_no);
         }
     }
 }
@@ -238,7 +275,7 @@ void checkLeftValue(struct ASTNode* leftValue) {
         
         if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) {
             typeViolationExists = true;
-            reportTypeViolation(leftValue -> line_no);
+            reportTypeViolation(leftValue -> data.line_no);
         }
         
         if (!typeViolationExists) {
@@ -249,14 +286,18 @@ void checkLeftValue(struct ASTNode* leftValue) {
         struct ASTNode * index = leftValue -> children[0];
         struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValueName);
         
+        /*
+            NEED TO CHECK MORE THAN ONE INDEX HERE
+        */
+
         if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) {
             typeViolationExists = true;
-            reportTypeViolation(leftValue -> line_no);
+            reportTypeViolation(leftValue -> data.line_no);
         } else {
-            if (foundEntry -> data_type != DATATYPE_INTARR || foundEntry -> data_type != DATATYPE_STRARR || foundEntry -> data_type != DATATYPE_BOOLARR) {
-                typeViolationExists = true;
-                reportTypeViolation(leftValue -> line_no);
-            }
+            // if (foundEntry -> data_type != DATATYPE_INTARR || foundEntry -> data_type != DATATYPE_STRARR || foundEntry -> data_type != DATATYPE_BOOLARR) {
+            //     typeViolationExists = true;
+            //     reportTypeViolation(leftValue -> data.line_no);
+            // }
         }
 
         checkIndex(index);
@@ -281,6 +322,18 @@ void checkStatement(struct ASTNode* statement){
         struct ASTNode * methodCall = statement -> children[0];
         checkMethodCall(methodCall);
     }
+}
+
+/*
+    All argument handler functions
+*/
+
+struct ArgEntry * createArgument(char * id, enum DataType data_type, int num_indices) {
+    struct ArgEntry * entry = malloc(sizeof(struct ArgEntry));
+    entry -> id = id;
+    entry -> data_type = data_type;
+    entry -> num_indices = num_indices;
+    return entry;
 }
 
 /*
@@ -364,6 +417,8 @@ struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum 
         entry -> id = id;
         entry -> type = type;
         entry -> data_type = data_type;
+        entry -> num_args = 0;
+        entry -> num_indices = 0;
         head -> symbol_table[head -> num_entries] = entry;
         head -> num_entries++;
         return entry;

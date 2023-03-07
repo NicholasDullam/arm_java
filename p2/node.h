@@ -8,10 +8,7 @@ enum DataType {
     DATATYPE_UNDEFINED, 
     DATATYPE_STR, 
     DATATYPE_INT, 
-    DATATYPE_BOOLEAN,
-    DATATYPE_STRARR,
-    DATATYPE_INTARR,
-    DATATYPE_BOOLARR 
+    DATATYPE_BOOLEAN
 };
 
 // Returns the name of the given data type.
@@ -22,6 +19,8 @@ static inline const char *type_string(enum DataType t) {
 
 struct SemanticData {
     enum DataType type;
+    int num_indices;
+    int line_no;
     union value_t {
         char* string_value;
         int int_value;
@@ -68,7 +67,6 @@ enum NodeType {
 struct ASTNode {
     struct ASTNode* children[MAX_NUM_CHILDREN];
     int num_children;
-    int line_no;
     
     enum NodeType node_type;
     struct SemanticData data;

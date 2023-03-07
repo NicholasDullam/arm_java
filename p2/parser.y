@@ -188,8 +188,9 @@ Type:
     }
     | Type '[' ']' {
         $$ = new_node(NODETYPE_TYPE, yylineno);
-        $$ -> data.type = $1 -> data.type;
         add_child($$, $1);
+        $$ -> data.type = $1 -> data.type;
+        $$ -> data.num_indices = $1 -> data.num_indices + 1;
     };
 
 PrimeType:                   
@@ -243,7 +244,7 @@ StaticMethodDeclList:
     };
 
 FormalList:
-    ArgList Arg {
+    Arg ArgList {
         $$ = new_node(NODETYPE_FORMALLIST, yylineno);
         add_child($$, $1);
         add_child($$, $2);
@@ -256,6 +257,7 @@ Arg:
     Type ID {
         $$ = new_node(NODETYPE_ARG, yylineno);
         set_string_value($$, $2);
+        add_child($$, $1);
     };
 
 ArgList:
