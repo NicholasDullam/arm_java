@@ -276,101 +276,101 @@ ArgList:
 
 Exp:  
     Exp TOK_PLUS Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_ADDOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_MINUS Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_TERMOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);        
         // fill out other semantics
     }
     | Exp TOK_AND Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_BINOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_OR Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_BINOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_LESS Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_COMPOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_GREAT Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_COMPOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_LEQ Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_COMPOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_GREQ Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_COMPOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_EQ Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_COMPOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_NEQ Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_COMPOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | TOK_NOT Factor {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_NOT, yylineno);
         add_child($$, $2);
         // fill out other semantics
     }
     | TOK_PLUS Factor {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_ADJOP, yylineno);
         add_child($$, $2);
         // fill out other semantics
     }
     | TOK_MINUS Factor {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_ADJOP, yylineno);
         add_child($$, $2);
         // fill out other semantics
     }
     | Term {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_TERM, yylineno);
         add_child($$, $1);
         // fill out other semantics
     };
 
 Term:
     Term TOK_MULT Factor {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_FACTOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Term TOK_DIV Factor {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_FACTOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Factor {
-        $$ = new_node(NODETYPE_LITERAL, yylineno);
+        $$ = new_node(NODETYPE_FACTOR, yylineno);
         add_child($$, $1);
         // fill out other semantics
     };

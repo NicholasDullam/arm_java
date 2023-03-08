@@ -76,7 +76,7 @@ struct SymbolTableEntry * searchGlobalScope(char* id);
     All symbol-table handler functions
 */
 
-struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum DataType data_type, struct SemanticData data);
+struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum DataType data_type, int num_indices);
 struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char* id);
 
 /*
@@ -97,9 +97,10 @@ void checkVarDecl(struct ASTNode* varDecl);
 void checkMethodCall(struct ASTNode* methodCall);
 void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNode* expDecl);
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl);
-void checkFormalList(struct ASTNode* formalList);
 void checkExp(struct ASTNode* exp);
-void checkIndex(struct ASTNode* index);
+void checkFactor(struct ASTNode* factor);
+void checkTerm(struct ASTNode* term);
+int checkIndex(struct ASTNode* index);          // returns integer to indicate the depth of indices for type information
 void checkLeftValue(struct ASTNode* leftValue);
 void checkStatement(struct ASTNode* statement);
 

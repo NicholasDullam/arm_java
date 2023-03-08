@@ -34,6 +34,16 @@ enum NodeType {
     NODETYPE_STATEMENT,
     NODETYPE_STATEMENTLIST,
 
+    NODETYPE_BINOP,     // all binary operations
+    NODETYPE_NOT,       // for bin op of not
+    NODETYPE_COMPOP,    // all comparison operations
+    NODETYPE_ADDOP,     // separated for concatenation
+    NODETYPE_ADJOP,     // for all adjustment operations
+    NODETYPE_TERMOP,    // other term operations
+    NODETYPE_FACTOP,    // all factor operations
+    NODETYPE_TERM,      // for all terms
+    NODETYPE_FACTOR,    // for all factors
+
     NODETYPE_VARDECL,
     NODETYPE_VARDECLEXPLIST,
     NODETYPE_STATICVARDECL,
