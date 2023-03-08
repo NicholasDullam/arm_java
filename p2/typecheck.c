@@ -462,6 +462,7 @@ void checkStatementList(struct ASTNode* statementList) {
 // TODO add return value typechecking
 // TODO make sure that rules are not reporting multiple repeat type violations
 // TODO check the arguments for the method calls
+// TODO change the forward references to check for name clashing and set typings to undefined
 
 // Check the given statement
 void checkStatement(struct ASTNode* statement){
