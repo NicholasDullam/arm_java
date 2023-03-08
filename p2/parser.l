@@ -34,7 +34,7 @@ static                { return KW_STATIC;             }
 String                { return KW_STRING;             }
 System\.out\.print    { return SYSTEM_OUT_PRINT;      }
 System\.out\.println  { return SYSTEM_OUT_PRINTLN;    }
-Integer\.ParseInt     { return INTEGER_PARSE_INT;     }
+Integer\.parseInt     { return INTEGER_PARSE_INT;     }
 void                  { return KW_VOID;               }
 
 "&&"                  { return TOK_AND;               } /* operators */
@@ -60,6 +60,7 @@ void                  { return KW_VOID;               }
 \=                    { return *yytext;               }
 \;                    { return *yytext;               }
 \,                    { return *yytext;               }
+\.                    { return *yytext;               }
 
 
 [0-9]+ {

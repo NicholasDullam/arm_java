@@ -132,13 +132,37 @@ Statement:
         $$ = new_node(NODETYPE_VARDECL, yylineno);
         add_child($$, $1);
     }
+    | '{' StatementList '}' {
+        $$ = new_node(NODETYPE_STATEMENTLIST, yylineno);
+        add_child($$, $2);
+    }
+    | KW_IF '(' Exp ')' Statement KW_ELSE Statement {
+        $$ = new_node(NODETYPE_IFELSE, yylineno);
+        add_child($$, $3);
+        add_child($$, $5);
+        add_child($$, $7);
+    }
+    | KW_WHILE '(' Exp ')' Statement {
+        $$ = new_node(NODETYPE_WHILE, yylineno);
+        add_child($$, $3);
+        add_child($$, $5);
+    }
     | SYSTEM_OUT_PRINTLN '(' Exp ')' ';' {
-        $$ = new_node(NODETYPE_STATEMENT, yylineno);
+        $$ = new_node(NODETYPE_PRINTLN, yylineno);
         add_child($$, $3);
     }
     | SYSTEM_OUT_PRINT '(' Exp ')' ';' {
-        $$ = new_node(NODETYPE_STATEMENT, yylineno);
+        $$ = new_node(NODETYPE_PRINT, yylineno);
         add_child($$, $3);
+    }
+    | LeftValue '=' Exp ';' { 
+        $$ = new_node(NODETYPE_REASSIGN, yylineno);
+        add_child($$, $1);
+        add_child($$, $3);
+    }
+    | KW_RETURN Exp ';' {
+        $$ = new_node(NODETYPE_RETURN, yylineno);
+        add_child($$, $2);
     }
     | MethodCall {
         $$ = new_node(NODETYPE_METHODCALL, yylineno);

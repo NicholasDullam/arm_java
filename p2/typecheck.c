@@ -330,19 +330,25 @@ void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
 
 // Check a given method call
 void checkMethodCall(struct ASTNode* methodCall) {
-    char * methodName = methodCall -> data.value.string_value;
     enum NodeType methodCallType = methodCall -> node_type;
-    struct SymbolTableEntry * method = searchGlobalScope(methodName);
-    
     if (methodCallType == NODETYPE_METHODCALL) {
-        if (!method || method -> type != ENTRYTYPE_METHOD) {
+        char * methodName = methodCall -> data.value.string_value;
+        struct SymbolTableEntry * entry = searchGlobalScope(methodName);
+        if (!entry || entry -> type != ENTRYTYPE_METHOD) {
             printf("Faulty method call\n");
             reportTypeViolation(methodCall -> data.line_no);
         }
 
         // handle other method call and exp handling (alongside type changes for the parent methodCall)
-    } else if (methodCallType == NODETYPE_PARSEINT) {
-        
+    } else if (methodCallType == NODETYPE_PARSEINT) { 
+        struct ASTNode * exp = methodCall -> children[0];
+        if (exp -> data.type == DATATYPE_STR) {
+            methodCall -> data.type = DATATYPE_INT;
+        } else {
+            printf("Faulty parse int (invalid typing)\n");
+            reportTypeViolation(methodCall -> data.line_no);
+            methodCall -> data.type = DATATYPE_UNDEFINED;
+        }
     }
 }
 
@@ -451,16 +457,46 @@ void checkStatementList(struct ASTNode* statementList) {
     checkStatement(statement);
 }
 
+// TODO finish the rest of the statement typechecking
+// TODO add in num_indices checking for all of the type explicit rules
+// TODO add return value typechecking
+// TODO make sure that rules are not reporting multiple repeat type violations
+// TODO check the arguments for the method calls
+
 // Check the given statement
 void checkStatement(struct ASTNode* statement){
     enum NodeType statementType = statement -> node_type;
     if (statementType == NODETYPE_PRINT || statementType == NODETYPE_PRINTLN) {
-        // All undefined types (int, boolean, String) are printable.
-        // Even if the expression is eventually undefined, no errors are
-        // reported here - undefined type is due to other type violations.
+        return;
     } else if (statementType == NODETYPE_VARDECL) {
         struct ASTNode * varDecl = statement -> children[0];
         checkVarDecl(varDecl);
+    } else if (statementType == NODETYPE_STATEMENTLIST) {
+        struct ASTNode * statementList = statement -> children[0];
+        checkStatementList(statementList);
+    } else if (statementType == NODETYPE_IFELSE) {
+        struct ASTNode * exp = statement -> children[0];
+        struct ASTNode * firstArgStatement = statement -> children[1];
+        struct ASTNode * secArgStatement = statement -> children[2];
+        checkExp(exp);
+        checkStatement(firstArgStatement);
+        checkStatement(secArgStatement);
+    } else if (statementType == NODETYPE_WHILE) {
+        struct ASTNode * exp = statement -> children[0];
+        struct ASTNode * argStatement = statement -> children[1];
+        checkExp(exp);
+        checkStatement(argStatement);
+    } else if (statementType == NODETYPE_REASSIGN) {
+        struct ASTNode * leftValue = statement -> children[0];
+        struct ASTNode * exp = statement -> children[1];
+        checkLeftValue(leftValue);
+        checkExp(exp);
+    } else if (statementType == NODETYPE_RETURN) {
+        struct ASTNode * exp = statement -> children[1];
+        checkExp(exp);
+
+        // add return value type checking here
+
     } else if (statementType == NODETYPE_METHODCALL) {
         struct ASTNode * methodCall = statement -> children[0];
         checkMethodCall(methodCall);
