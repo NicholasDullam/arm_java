@@ -418,10 +418,12 @@ void checkMethodCall(struct ASTNode* methodCall) {
                         break;
                     } else {
                         checkExp(exp);
-                        if ((exp -> data.type != entry -> args[i] -> data_type || exp -> data.num_indices != entry -> args[i] -> num_indices) &&
-                            exp -> data.type != DATATYPE_UNDEFINED) {
+                        if (exp -> data.type == DATATYPE_UNDEFINED) {
+                            break;
+                        } else if (exp -> data.type != entry -> args[i] -> data_type || exp -> data.num_indices != entry -> args[i] -> num_indices) {
                             printf("Invalid argument type\n");
                             reportTypeViolation(methodCall -> data.line_no);
+                            break;
                         }
                     }
 
@@ -430,6 +432,11 @@ void checkMethodCall(struct ASTNode* methodCall) {
                     } else {
                         exp = expTail -> children[0];
                         expTail = expTail -> children[1];
+                        if (i == entry -> num_args - 1) {
+                            printf("Too many arguments\n");
+                            reportTypeViolation(methodCall -> data.line_no);
+                            break;
+                        }
                     }
                 }
             }
