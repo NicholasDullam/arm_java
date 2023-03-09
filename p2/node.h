@@ -37,6 +37,7 @@ enum NodeType {
     NODETYPE_BINOP,     // all binary operations
     NODETYPE_NOT,       // for bin op of not
     NODETYPE_COMPOP,    // all comparison operations
+    NODETYPE_EQOP,      // all equals comparison operations
     NODETYPE_ADDOP,     // separated for concatenation
     NODETYPE_ADJOP,     // for all adjustment operations
     NODETYPE_TERMOP,    // other term operations

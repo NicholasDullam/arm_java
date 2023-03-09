@@ -10,7 +10,7 @@ struct ScopeEntry * head = NULL;
 
 static void reportTypeViolation(int line_number) {
     num_errors += 1;
-    fprintf(stderr, "Type Violation in Line %d\n", line_number);
+    fprintf(stderr, "Type violation in line %d\n", line_number);
 }
 
 /*
@@ -187,22 +187,10 @@ void checkExp(struct ASTNode* exp) {
         checkTerm(term);
         if (term -> data.type == DATATYPE_UNDEFINED) {
             exp -> data.type = DATATYPE_UNDEFINED;
-        } else if (term -> data.type == nestedExp -> data.type && term -> data.num_indices == 0) {
+        } else if (term -> data.type == nestedExp -> data.type && term -> data.num_indices == 0 && nestedExp -> data.num_indices == 0) {
             exp -> data.type = DATATYPE_BOOLEAN;
         } else {
             printf("Faulty comparison operation\n");
-            reportTypeViolation(exp -> data.line_no);
-            exp -> data.type = DATATYPE_UNDEFINED;
-        }
-    } else if (expType == NODETYPE_ADJOP) { // Check the adjustment operations
-        struct ASTNode * factor = exp -> children[0];
-        checkFactor(factor);
-        if (factor -> data.type == DATATYPE_UNDEFINED) {
-            exp -> data.type = DATATYPE_UNDEFINED;
-        } else if (factor -> data.type == DATATYPE_INT && factor -> data.num_indices == 0) {
-            exp -> data.type = DATATYPE_INT;
-        } else {
-            printf("Faulty adjustment operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -221,15 +209,17 @@ void checkExp(struct ASTNode* exp) {
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
-    } else if (expType == NODETYPE_NOT) { // Check the binary adjustment operations
-        struct ASTNode * factor = exp -> children[0];
-        checkFactor(factor);
-        if (factor -> data.type == DATATYPE_UNDEFINED) {
+    } else if (expType == NODETYPE_EQOP) {
+        struct ASTNode * nestedExp = exp -> children[0];
+        struct ASTNode * term = exp -> children[1];
+        checkExp(nestedExp);
+        checkTerm(term);
+        if (nestedExp -> data.type == DATATYPE_UNDEFINED || term -> data.type == DATATYPE_UNDEFINED) {
             exp -> data.type = DATATYPE_UNDEFINED;
-        } else if (factor -> data.type == DATATYPE_BOOLEAN && factor -> data.num_indices == 0) {
+        } else if (nestedExp -> data.type == term -> data.type && nestedExp -> data.num_indices == term -> data.num_indices) {
             exp -> data.type = DATATYPE_BOOLEAN;
         } else {
-            printf("Faulty binary adjustment operation\n");
+            printf("Faulty equals comparison operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -289,6 +279,30 @@ void checkFactor(struct ASTNode* factor) {
             factor -> data.type = DATATYPE_INT;
         } else {
             printf("Faulty length operation\n");
+            reportTypeViolation(factor -> data.line_no);
+            factor -> data.type = DATATYPE_UNDEFINED;
+        }
+    } else if (factorType == NODETYPE_ADJOP) { // Check the adjustment operations
+        struct ASTNode * nestedFactor = factor -> children[0];
+        checkFactor(nestedFactor);
+        if (nestedFactor -> data.type == DATATYPE_UNDEFINED) {
+            factor -> data.type = DATATYPE_UNDEFINED;
+        } else if (nestedFactor -> data.type == DATATYPE_INT && nestedFactor -> data.num_indices == 0) {
+            factor -> data.type = DATATYPE_INT;
+        } else {
+            printf("Faulty adjustment operation\n");
+            reportTypeViolation(factor -> data.line_no);
+            factor -> data.type = DATATYPE_UNDEFINED;
+        }
+    } else if (factorType == NODETYPE_NOT) { // Check the binary adjustment operations
+        struct ASTNode * nestedFactor = factor -> children[0];
+        checkFactor(nestedFactor);
+        if (nestedFactor -> data.type == DATATYPE_UNDEFINED) {
+            factor -> data.type = DATATYPE_UNDEFINED;
+        } else if (nestedFactor -> data.type == DATATYPE_BOOLEAN && nestedFactor -> data.num_indices == 0) {
+            factor -> data.type = DATATYPE_BOOLEAN;
+        } else {
+            printf("Faulty binary adjustment operation\n");
             reportTypeViolation(factor -> data.line_no);
             factor -> data.type = DATATYPE_UNDEFINED;
         }

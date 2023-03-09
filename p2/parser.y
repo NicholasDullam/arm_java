@@ -349,30 +349,15 @@ Exp:
         // fill out other semantics
     }
     | Exp TOK_EQ Term {
-        $$ = new_node(NODETYPE_COMPOP, yylineno);
+        $$ = new_node(NODETYPE_EQOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_NEQ Term {
-        $$ = new_node(NODETYPE_COMPOP, yylineno);
+        $$ = new_node(NODETYPE_EQOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
-        // fill out other semantics
-    }
-    | TOK_NOT Factor {
-        $$ = new_node(NODETYPE_NOT, yylineno);
-        add_child($$, $2);
-        // fill out other semantics
-    }
-    | TOK_PLUS Factor {
-        $$ = new_node(NODETYPE_ADJOP, yylineno);
-        add_child($$, $2);
-        // fill out other semantics
-    }
-    | TOK_MINUS Factor {
-        $$ = new_node(NODETYPE_ADJOP, yylineno);
-        add_child($$, $2);
         // fill out other semantics
     }
     | Term {
@@ -417,9 +402,23 @@ Factor:
         $$ = new_node(NODETYPE_LITERAL, yylineno);
         set_boolean_value($$, false);
     }
+    | TOK_NOT Factor {
+        $$ = new_node(NODETYPE_NOT, yylineno);
+        add_child($$, $2);
+        // fill out other semantics
+    }
+    | TOK_PLUS Factor {
+        $$ = new_node(NODETYPE_ADJOP, yylineno);
+        add_child($$, $2);
+        // fill out other semantics
+    }
+    | TOK_MINUS Factor {
+        $$ = new_node(NODETYPE_ADJOP, yylineno);
+        add_child($$, $2);
+        // fill out other semantics
+    }
     | '(' Exp ')' {
         $$ = new_node(NODETYPE_EXP, yylineno);
-        //$$ -> data.type = $2 -> data.type;
         add_child($$, $2);
     }
     | LeftValue {
