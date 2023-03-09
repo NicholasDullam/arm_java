@@ -9,6 +9,6 @@ TODO: Fix the sorting of type violations
 
 TODO: For the method handling, use the table entry "declarations" to handle error reporting at the proper stage
 
-TODO: Check the precedance and rules with '-' and '+' adjustments
+TODO (DONE): Check the precedance and rules with '-' and '+' adjustments
 
 TODO (DONE): Change the equals and nequals behavior for reference pointers (like arrays)
