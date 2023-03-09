@@ -1,9 +1,9 @@
 #ifndef TYPE_CHECK_H
 #define TYPE_CHECK_H
 
-#define MAX_SCOPED_CHILDREN 10
-#define MAX_TABLE_SIZE 50
-#define MAX_ARGUMENTS 10
+#define MAX_SCOPED_CHILDREN 10              // max child scopes for a given scope
+#define MAX_TABLE_SIZE 50                   // max symbol table size for a given scope
+#define MAX_ARGUMENTS 10                    // max arguments for a given method entry
 
 #include "node.h"
 
@@ -106,6 +106,5 @@ void checkLeftValue(struct ASTNode* leftValue);
 void checkStatement(struct ASTNode* statement);
 
 extern int num_errors;
-extern int num_entries;
 
 #endif

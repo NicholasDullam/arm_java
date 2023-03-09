@@ -14,3 +14,31 @@ TODO: Fix undefined type of pseudo methods like .length, if statements and while
 TODO (DONE): Check the precedance and rules with '-' and '+' adjustments
 
 TODO (DONE): Change the equals and nequals behavior for reference pointers (like arrays)
+
+TODO: if duplicate args are the same type, dont make the undefined
+TODO: if multiple method definitions exist of the same return type, dont make the type undefined
+TOOD: fulfill return type checking
+
+# Project 2 Overview
+
+General explanation here
+
+## Grammar
+
+Explain grammars here
+
+## Abstract Symbol Table
+
+Explain the abstract symbol table and node generation
+
+## Scope Reduction
+
+Explain the scope reduction processes leading into the symbol table 
+
+## Symbol Table
+
+Explain the symbol table
+
+## Other
+
+Explain all other methodologies
