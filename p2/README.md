@@ -8,3 +8,5 @@ TODO: Fix the duplicate method handling
 TODO: Fix the sorting of type violations
 
 TODO: For the method handling, use the table entry "declarations" to handle error reporting at the proper stage
+
+TODO: Check the precedance and rules with '-' and '+' adjustments
