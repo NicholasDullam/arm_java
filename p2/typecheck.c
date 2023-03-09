@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 int num_errors = 0;
-
 struct ScopeEntry * head = NULL;
 
 static void reportTypeViolation(int line_number) {
@@ -465,8 +464,8 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
         FIX THE ARG LIST HERE TO ACCOMODATE FOR METHOD OVERLOADING
     */
 
-    // Change the scope and add in arguments to the method scope
-    createScope(SCOPETYPE_METHOD);    
+    // change the scope and add in arguments to the method scope
+    createScope(SCOPETYPE_METHOD); // creates a new method scope   
     struct SymbolTableEntry * methodEntry = searchGlobalScope(staticMethodDecl -> data.value.string_value);
     for (int i = 0; i < methodEntry -> num_args; i++) {
         struct SymbolTableEntry * argEntry = searchLocalScope(methodEntry -> args[i] -> id);
@@ -478,12 +477,11 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
             addToSymbolTable(methodEntry -> args[i] -> id, ENTRYTYPE_VAR, methodEntry -> args[i] -> data_type, methodEntry -> args[i] -> num_indices);
         }
     }
-    createScope(SCOPETYPE_LOCAL);
-    // TODO (check function symbol table entry and statementlist [maybe return value typing as well])
+    createScope(SCOPETYPE_LOCAL); // creates a new local scope
 
     checkStatementList(statementList);
-    exitScope();
-    exitScope();
+    exitScope(); // exits the local scope
+    exitScope(); // exits the method scope
 }
 
 /*
@@ -601,7 +599,7 @@ void checkStatement(struct ASTNode* statement){
         struct ASTNode * firstArgStatement = statement -> children[1];
         struct ASTNode * secArgStatement = statement -> children[2];
         checkExp(exp);
-        if (exp -> data.type != DATATYPE_BOOLEAN || exp -> data.num_indices > 0) {
+        if ((exp -> data.type != DATATYPE_BOOLEAN || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
             printf("Invalid if conditional\n");
             reportTypeViolation(statement -> data.line_no);
         }
@@ -615,7 +613,7 @@ void checkStatement(struct ASTNode* statement){
         struct ASTNode * exp = statement -> children[0];
         struct ASTNode * argStatement = statement -> children[1];
         checkExp(exp);
-        if (exp -> data.type != DATATYPE_BOOLEAN || exp -> data.num_indices > 0) {
+        if ((exp -> data.type != DATATYPE_BOOLEAN || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
             printf("Invalid while conditional\n");
             reportTypeViolation(statement -> data.line_no);
         }
@@ -648,6 +646,7 @@ void checkStatement(struct ASTNode* statement){
     All argument handler functions
 */
 
+// Create an argument object to be added to a SymbolTableEntry
 struct ArgEntry * createArgument(char * id, enum DataType data_type, int num_indices) {
     struct ArgEntry * entry = malloc(sizeof(struct ArgEntry));
     entry -> id = id;
@@ -660,6 +659,7 @@ struct ArgEntry * createArgument(char * id, enum DataType data_type, int num_ind
     All scope handler functions
 */
 
+// Create a new scope in the scope tree and replace as scope head
 void createScope(enum ScopeType type) {
     struct ScopeEntry * child = malloc(sizeof(struct ScopeEntry));
     addChildScope(head, child);
@@ -670,6 +670,7 @@ void createScope(enum ScopeType type) {
     head = child;
 }
 
+// Exit the current scope if current scope has a parent scope
 int exitScope() {
     if (head -> parent) {
         head = head -> parent;
@@ -679,6 +680,7 @@ int exitScope() {
     }
 }
 
+// As a child scope to the given parent scope
 int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
     if (!parent) return 0;
     if (parent -> num_children < MAX_NUM_CHILDREN - 1) {
@@ -690,10 +692,12 @@ int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
     }
 }
 
+// Search within the current scope for a symbol
 struct SymbolTableEntry * searchLocalScope(char* id) {
     return findSymbol(head, id);
 }
 
+// Search within the current method scope (not inclusive of method arguments) for a symbol
 struct SymbolTableEntry * searchMethodScope(char* id) {
     struct ScopeEntry* curr = head;
     
@@ -706,6 +710,7 @@ struct SymbolTableEntry * searchMethodScope(char* id) {
     return NULL;
 }
 
+// Search within the entire scope tree for a given symbol
 struct SymbolTableEntry * searchGlobalScope(char* id) {
     struct ScopeEntry* curr = head;
     
@@ -722,6 +727,7 @@ struct SymbolTableEntry * searchGlobalScope(char* id) {
     All symbol table management functions
 */
 
+// Find a symbol in a given scope's symbol table
 struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char * id){
     for (int i = 0; i < scope -> num_entries; ++i) {
         if(strcmp(id, scope -> symbol_table[i]->id) == 0){
@@ -731,6 +737,7 @@ struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char * id){
     return NULL;
 }
 
+// Add a symbol to the symbol table of the current scope head
 struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum DataType data_type, int num_indices){
     if (head -> num_entries < MAX_TABLE_SIZE - 1) {
         struct SymbolTableEntry* entry = malloc(sizeof(struct SymbolTableEntry));
