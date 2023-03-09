@@ -385,21 +385,20 @@ void checkStaticMethodDeclList(struct ASTNode * staticMethodDeclList) {
 }
 
 // Check a given method call
-
-// MAKES ME THINK THAT THE METHOD FORWARD REFERENCES SHOULD NOT HANDLE THE ARGUMENT COUNT (THAT SHOULD BE HANDLED AT THE SCOPE LEVEL)
-
 void checkMethodCall(struct ASTNode* methodCall) {
     enum NodeType methodCallType = methodCall -> node_type;
-    if (methodCallType == NODETYPE_METHODCALL) {
+    if (methodCallType == NODETYPE_METHODCALL) { // Check all traditional method calls
         char * methodName = methodCall -> data.value.string_value;
         struct SymbolTableEntry * entry = searchGlobalScope(methodName);
         
+        // If method does not exist, return error
         if (!entry || entry -> type != ENTRYTYPE_METHOD) {
             printf("Faulty method call (does not exist)\n");
             reportTypeViolation(methodCall -> data.line_no);
             methodCall -> data.type = DATATYPE_UNDEFINED;
         }
 
+        // If method entry is undefined, pass value as undefined, otherwise evaluate arguments
         if (entry && entry -> data_type == DATATYPE_UNDEFINED) {
             methodCall -> data.type = DATATYPE_UNDEFINED;
         } else if (entry) {
@@ -444,7 +443,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
             methodCall -> data.type = entry -> data_type;
             methodCall -> data.num_indices = entry -> num_indices;
         }
-    } else if (methodCallType == NODETYPE_PARSEINT) { 
+    } else if (methodCallType == NODETYPE_PARSEINT) { // Check for parseInt method calls
         struct ASTNode * exp = methodCall -> children[0];
         if (exp -> data.type == DATATYPE_STR) {
             methodCall -> data.type = DATATYPE_INT;
