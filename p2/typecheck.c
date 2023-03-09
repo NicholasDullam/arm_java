@@ -586,7 +586,7 @@ void checkStatement(struct ASTNode* statement){
     if (statementType == NODETYPE_PRINT || statementType == NODETYPE_PRINTLN) {
         struct ASTNode * exp = statement -> children[0];
         checkExp(exp);
-        if (exp -> data.num_indices > 0 && !exp -> data.type == DATATYPE_UNDEFINED) {
+        if (exp -> data.num_indices > 0 && exp -> data.type != DATATYPE_UNDEFINED) {
             printf("Invalid parameters for print statement\n");
             reportTypeViolation(statement -> data.line_no);
         }
