@@ -17,7 +17,7 @@ enum EntryType { ENTRYTYPE_CLASS, ENTRYTYPE_METHOD, ENTRYTYPE_VAR };
 
 struct ArgEntry {
     char * id;
-    int num_indices;
+    int num_indices;                        // used for tracking array types of table entries
     enum DataType data_type;
 };
 
@@ -30,9 +30,10 @@ struct ArgEntry {
 
 struct SymbolTableEntry {
     char * id;
-    int length;                               // used to represent the length of an array datatype
+    int length;                             // used to represent the length of an array datatype
     int num_args;                           // used to represent the length of the arguments array
-    int num_indices;
+    int num_indices;                        // used for tracking array types of table entries
+    int declarations;                       // used tracking method declarations and reporting method overloading at proper stage    
     enum EntryType type;
     enum DataType data_type;
     struct ArgEntry * args[MAX_ARGUMENTS];
