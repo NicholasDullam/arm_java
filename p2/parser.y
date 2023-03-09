@@ -164,7 +164,7 @@ Statement:
         $$ = new_node(NODETYPE_RETURN, yylineno);
         add_child($$, $2);
     }
-    | MethodCall {
+    | MethodCall ';' {
         $$ = new_node(NODETYPE_METHODCALL, yylineno);
         add_child($$, $1);
     };
@@ -186,6 +186,7 @@ LeftValue:
     }
     | ID Index {
         $$ = new_node(NODETYPE_LEFTVALUEINDEX, yylineno);
+        set_string_value($$, $1);
         add_child($$, $2);
     };
 
