@@ -13,7 +13,7 @@ parser:		$(OBJS) $(LYOBJS)
 			gcc $(OBJS) $(LYOBJS) -o parser -lfl
 
 y.tab.c:	parser.y
-			bison -v -y -d -g -t --verbose -Wcounterexamples parser.y
+			bison -v -y -d -g -t --verbose parser.y
 
 lex.yy.c:	parser.l
 			flex -l parser.l

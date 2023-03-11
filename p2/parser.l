@@ -15,6 +15,7 @@ extern int yylex();
 
 if                    { return KW_IF;                 } /* keywords */
 else                  { return KW_ELSE;               }
+return                { return KW_RETURN;             }
 new                   { return KW_NEW;                }
 boolean               { return KW_BOOLEAN;            }
 class                 { return KW_CLASS;              }

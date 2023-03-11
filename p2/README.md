@@ -15,9 +15,11 @@ TODO (DONE): Check the precedance and rules with '-' and '+' adjustments
 
 TODO (DONE): Change the equals and nequals behavior for reference pointers (like arrays)
 
+TODO: Check how errors should be propagated on improper indices
+
 TODO: if duplicate args are the same type, dont make the undefined
 TODO: if multiple method definitions exist of the same return type, dont make the type undefined
-TOOD: fulfill return type checking
+TOOD: fulfill return type checking (do this through ScopeEntry and overload the create scope method to include parameters for methods)
 
 # Project 2 Overview
 

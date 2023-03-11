@@ -38,7 +38,7 @@ void checkMain(struct ASTNode* mainClass) {
     checkStaticMethodDeclList(mainClass->children[1]);
 
     // Change of scope before evaluating the main function, and inclusion of argument
-    createScope(SCOPETYPE_METHOD);
+    createMethodScope("main", DATATYPE_UNDEFINED, 0);
     addToSymbolTable(mainMethodEntry-> args[0] -> id, ENTRYTYPE_VAR, mainMethodEntry-> args[0] -> data_type, 1);
     createScope(SCOPETYPE_LOCAL);
 
@@ -345,8 +345,6 @@ void createMethodForwardReference(struct ASTNode* staticMethodDecl) {
     // Check for duplicate method declarations
     struct SymbolTableEntry * foundEntry = searchGlobalScope(id);
     if (foundEntry) {
-        printf("Faulty method declaration (already exists)\n");
-        reportTypeViolation(formalList -> data.line_no);
         foundEntry -> data_type = DATATYPE_UNDEFINED;
     } else {
         // Create symbol table entry
@@ -456,7 +454,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
 
 // Check the given static method decl
 void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
-    createScope(SCOPETYPE_METHOD);
+    struct ASTNode * type = staticMethodDecl -> children[0];
     struct ASTNode * formalList = staticMethodDecl -> children[1];
     struct ASTNode * statementList = staticMethodDecl -> children[2];
 
@@ -464,21 +462,32 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
         FIX THE ARG LIST HERE TO ACCOMODATE FOR METHOD OVERLOADING
     */
 
-    // change the scope and add in arguments to the method scope
-    createScope(SCOPETYPE_METHOD); // creates a new method scope   
+    // Change the scope and add in arguments to the method scope
+    createMethodScope(staticMethodDecl -> data.value.string_value, type -> data.type, type -> data.num_indices); // creates a new method scope   
     struct SymbolTableEntry * methodEntry = searchGlobalScope(staticMethodDecl -> data.value.string_value);
-    for (int i = 0; i < methodEntry -> num_args; i++) {
-        struct SymbolTableEntry * argEntry = searchLocalScope(methodEntry -> args[i] -> id);
-        if (argEntry) {
-            printf("Duplicate arguments\n");
-            reportTypeViolation(formalList -> data.line_no);
-            argEntry -> data_type = DATATYPE_UNDEFINED;
-        } else {
-            addToSymbolTable(methodEntry -> args[i] -> id, ENTRYTYPE_VAR, methodEntry -> args[i] -> data_type, methodEntry -> args[i] -> num_indices);
+    if (methodEntry -> num_declarations > 0) {
+        printf("Method redeclaration\n");
+        reportTypeViolation(formalList -> data.line_no);
+    }
+    methodEntry -> num_declarations += 1;
+    if (formalList -> node_type != NODETYPE_NULLABLE) { // Evaluate the formal list arguments
+        struct ASTNode * arg = formalList -> children[0];
+        struct ASTNode * argList = formalList -> children[1];
+        while (arg) { // Navigate through arg_list adding arguments to entry
+            struct ASTNode * argType = arg -> children[0];
+            struct SymbolTableEntry * argEntry = searchLocalScope(arg -> data.value.string_value);
+            if (argEntry) {
+                printf("Duplicate arguments\n");
+                reportTypeViolation(formalList -> data.line_no);
+            } else {
+                addToSymbolTable(arg -> data.value.string_value, ENTRYTYPE_VAR, argType -> data.type, argType -> data.num_indices);
+            }
+            if (argList -> node_type == NODETYPE_NULLABLE) break;
+            arg = argList -> children[0];
+            argList = argList -> children[1];
         }
     }
     createScope(SCOPETYPE_LOCAL); // creates a new local scope
-
     checkStatementList(statementList);
     exitScope(); // exits the local scope
     exitScope(); // exits the method scope
@@ -499,7 +508,7 @@ int checkIndex(struct ASTNode* index) {
         num_indices += checkIndex(newIndex);
         checkExp(exp);
         
-        if (exp -> data.type != DATATYPE_INT || exp -> data.num_indices > 0) {
+        if ((exp -> data.type != DATATYPE_INT || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
             printf("Faulty index list\n");
             reportTypeViolation(exp -> data.line_no);
         }
@@ -508,7 +517,7 @@ int checkIndex(struct ASTNode* index) {
         
         checkExp(exp);
 
-        if (exp -> data.type != DATATYPE_INT || exp -> data.num_indices > 0) {
+        if ((exp -> data.type != DATATYPE_INT || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
             printf("Faulty index\n");
             reportTypeViolation(exp -> data.line_no);
         }
@@ -524,7 +533,7 @@ void checkLeftValue(struct ASTNode* leftValue) {
         char * leftValueName = leftValue -> data.value.string_value;
         struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValueName);
         
-        if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) {
+        if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) { // if variable does not exist, throw error
             printf("Variable does not exist %s\n", leftValueName);
             reportTypeViolation(leftValue -> data.line_no);
             leftValue -> data.type = DATATYPE_UNDEFINED;
@@ -536,18 +545,16 @@ void checkLeftValue(struct ASTNode* leftValue) {
         char * leftValueName = leftValue -> data.value.string_value;
         struct ASTNode * index = leftValue -> children[0];
         struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValueName);
-
-        // Handle multiple indices and check the number of indices referenced
         int changeOfIndices = checkIndex(index);
-        if (changeOfIndices > foundEntry -> num_indices) {
-            printf("Variable does not support elicited indices\n");
-            reportTypeViolation(leftValue -> data.line_no);
-            //leftValue -> data.type = DATATYPE_UNDEFINED;
-        }
 
-        // If variable doesnt exist in global scope return type error
-        if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) {
+        if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) { // if variable does not exist, throw error
             printf("Faulty left value\n");
+            reportTypeViolation(leftValue -> data.line_no);
+            leftValue -> data.type = DATATYPE_UNDEFINED;
+        } else if (foundEntry -> data_type == DATATYPE_UNDEFINED) { // if datatype is not defined, return undefined type
+            leftValue -> data.type = DATATYPE_UNDEFINED;
+        } else if (changeOfIndices > foundEntry -> num_indices) { // if indices not supported, throw error
+            printf("Variable does not support elicited indices\n");
             reportTypeViolation(leftValue -> data.line_no);
             leftValue -> data.type = DATATYPE_UNDEFINED;
         } else {
@@ -569,9 +576,9 @@ void checkStatementList(struct ASTNode* statementList) {
     }
 }
 
-// TODO add return value typechecking
 // TODO make sure that multiple methods are not allowed
 
+// TODO add return value typechecking
 // TODO finish the rest of the statement typechecking
 // TODO make sure that rules are not reporting multiple repeat type violations
 // TODO check the arguments for the method calls
@@ -593,7 +600,9 @@ void checkStatement(struct ASTNode* statement){
         checkVarDecl(varDecl);
     } else if (statementType == NODETYPE_STATEMENTLIST) {
         struct ASTNode * statementList = statement -> children[0];
+        createScope(SCOPETYPE_LOCAL);
         checkStatementList(statementList);
+        exitScope();
     } else if (statementType == NODETYPE_IFELSE) {
         struct ASTNode * exp = statement -> children[0];
         struct ASTNode * firstArgStatement = statement -> children[1];
@@ -631,11 +640,14 @@ void checkStatement(struct ASTNode* statement){
             reportTypeViolation(statement -> data.line_no);
         }
     } else if (statementType == NODETYPE_RETURN) {
-        struct ASTNode * exp = statement -> children[1];
+        struct ASTNode * exp = statement -> children[0];
+        struct ScopeEntry * methodScope = nearestMethodScope();
         checkExp(exp);
-
-        // add return value type checking here
-
+        if ((exp -> data.type != methodScope -> data_type || exp -> data.num_indices != methodScope -> num_indices) &&
+            !(exp -> data.type == DATATYPE_UNDEFINED || methodScope -> data_type == DATATYPE_UNDEFINED)) {
+            printf("Improper return statement\n");
+            reportTypeViolation(statement -> data.line_no);
+        }
     } else if (statementType == NODETYPE_METHODCALL) {
         struct ASTNode * methodCall = statement -> children[0];
         checkMethodCall(methodCall);
@@ -670,6 +682,20 @@ void createScope(enum ScopeType type) {
     head = child;
 }
 
+// Creat a new method scope with relevant return type information
+void createMethodScope(char * id, enum DataType data_type, int num_indices) {
+    struct ScopeEntry * child = malloc(sizeof(struct ScopeEntry));
+    addChildScope(head, child);
+    child -> parent = head;
+    child -> type = SCOPETYPE_METHOD;
+    child -> id = id;
+    child -> data_type = data_type;
+    child -> num_indices = num_indices;
+    child -> num_children = 0;
+    child -> num_entries = 0;
+    head = child;
+}
+
 // Exit the current scope if current scope has a parent scope
 int exitScope() {
     if (head -> parent) {
@@ -692,6 +718,15 @@ int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
     }
 }
 
+// Finds the nearest method scope for use in return type checking
+struct ScopeEntry * nearestMethodScope() {
+    struct ScopeEntry* curr = head;
+    while (curr && curr -> type != SCOPETYPE_METHOD) {
+        curr = head -> parent;
+    }
+    return curr;
+}
+
 // Search within the current scope for a symbol
 struct SymbolTableEntry * searchLocalScope(char* id) {
     return findSymbol(head, id);
@@ -700,26 +735,22 @@ struct SymbolTableEntry * searchLocalScope(char* id) {
 // Search within the current method scope (not inclusive of method arguments) for a symbol
 struct SymbolTableEntry * searchMethodScope(char* id) {
     struct ScopeEntry* curr = head;
-    
     while (curr && curr -> type != SCOPETYPE_METHOD) {
         struct SymbolTableEntry* symbol = findSymbol(curr, id);
         if (symbol) return symbol;
         curr = curr -> parent;
     }
-
     return NULL;
 }
 
 // Search within the entire scope tree for a given symbol
 struct SymbolTableEntry * searchGlobalScope(char* id) {
     struct ScopeEntry* curr = head;
-    
     while (curr) {
         struct SymbolTableEntry* symbol = findSymbol(curr, id);
         if (symbol) return symbol;
         curr = curr -> parent;
     }
-
     return NULL;
 }
 

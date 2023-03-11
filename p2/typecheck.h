@@ -33,7 +33,7 @@ struct SymbolTableEntry {
     int length;                             // used to represent the length of an array datatype
     int num_args;                           // used to represent the length of the arguments array
     int num_indices;                        // used for tracking array types of table entries
-    int declarations;                       // used tracking method declarations and reporting method overloading at proper stage    
+    int num_declarations;                       // used tracking method declarations and reporting method overloading at proper stage    
     enum EntryType type;
     enum DataType data_type;
     struct ArgEntry * args[MAX_ARGUMENTS];
@@ -47,12 +47,15 @@ struct SymbolTableEntry {
 */
 
 struct ScopeEntry {
+    char * id;                              // this will be used as a utility for checking return type
+    enum DataType data_type;                // this will be used as a utility for checking return type
+    int num_indices;                        // this will be used as a utility for checking return type
+    int num_children;
+    int num_entries;
     enum ScopeType type;
     struct ScopeEntry * parent;
     struct ScopeEntry * children[MAX_SCOPED_CHILDREN];
     struct SymbolTableEntry * symbol_table[MAX_TABLE_SIZE];
-    int num_children;
-    int num_entries;
 };
 
 /*
@@ -66,9 +69,11 @@ struct ArgEntry * createArgument(char * id, enum DataType data_type, int num_ind
 */
 
 void createScope(enum ScopeType type);
+void createMethodScope(char * id, enum DataType data_type, int num_indices);
 int addChildScope(struct ScopeEntry* parent, struct ScopeEntry * child);
 int exitScope();
 
+struct ScopeEntry * nearestMethodScope();
 struct SymbolTableEntry * searchLocalScope(char* id);
 struct SymbolTableEntry * searchMethodScope(char* id);
 struct SymbolTableEntry * searchGlobalScope(char* id);
