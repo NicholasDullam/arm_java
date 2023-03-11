@@ -19,4 +19,4 @@ lex.yy.c:	parser.l
 			flex -l parser.l
 
 clean:
-	rm -f lex.yy.c y.tab.c y.tab.h y.dot y.output parser $(OBJS) $(LYOBJS)
+	rm -f lex.yy.c y.tab.c y.tab.h y.dot y.output y.gv y.vcg parser $(OBJS) $(LYOBJS)
