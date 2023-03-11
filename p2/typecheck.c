@@ -107,18 +107,18 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         // If the variable already exists in the method scope, report an error
         if (foundEntry && (foundEntry -> data_type != type -> data.type || foundEntry -> num_indices != type -> data.num_indices)) {
-            printf("Faulty variable declaration (already exists of different type)\n");
+            //printf("Faulty variable declaration (already exists of different type)\n");
             reportTypeViolation(varDecl -> data.line_no);
             foundEntry -> data_type = DATATYPE_UNDEFINED;
         } else if (foundEntry) {
-            printf("Faulty variable declaration (already exists)\n");
+            //printf("Faulty variable declaration (already exists)\n");
             reportTypeViolation(varDecl -> data.line_no);
         }
 
         // If there is a typing mismatch, report the error
         if ((exp -> data.type != type -> data.type || exp -> data.num_indices != type -> data.num_indices) &&
             !(exp -> data.type == DATATYPE_UNDEFINED || (foundEntry && foundEntry -> data_type == DATATYPE_UNDEFINED))) {
-            printf("Variable declaration type mismatch\n");
+            //printf("Variable declaration type mismatch\n");
             reportTypeViolation(varDecl -> data.line_no);
         }
 
@@ -131,11 +131,11 @@ void checkExpDecl(struct ASTNode* varDecl, struct ASTNode* parent, struct ASTNod
 
         // If the variable already exists in the method scope, report an error
         if (foundEntry && (foundEntry -> data_type != type -> data.type || foundEntry -> num_indices != type -> data.num_indices)) {
-            printf("Faulty variable declaration (already exists of different type)\n");
+            //printf("Faulty variable declaration (already exists of different type)\n");
             reportTypeViolation(varDecl -> data.line_no);
             foundEntry -> data_type = DATATYPE_UNDEFINED;
         } else if (foundEntry) {
-            printf("Faulty variable declaration (already exists)\n");
+            //printf("Faulty variable declaration (already exists)\n");
             reportTypeViolation(varDecl -> data.line_no);
         } else {
             addToSymbolTable(id, ENTRYTYPE_VAR, type -> data.type, type -> data.num_indices);
@@ -160,7 +160,7 @@ void checkExp(struct ASTNode* exp) {
             nestedExp -> data.num_indices == 0 && term -> data.num_indices == 0) {
             exp -> data.type = DATATYPE_STR;
         } else {
-            printf("Faulty add/concat operation\n");
+            //printf("Faulty add/concat operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -175,7 +175,7 @@ void checkExp(struct ASTNode* exp) {
             nestedExp -> data.num_indices == 0 && term -> data.num_indices == 0) {
             exp -> data.type = DATATYPE_INT;
         } else {
-            printf("Faulty minus operation\n");
+            //printf("Faulty minus operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -189,7 +189,7 @@ void checkExp(struct ASTNode* exp) {
         } else if (term -> data.type == nestedExp -> data.type && term -> data.num_indices == 0 && nestedExp -> data.num_indices == 0) {
             exp -> data.type = DATATYPE_BOOLEAN;
         } else {
-            printf("Faulty comparison operation\n");
+            //printf("Faulty comparison operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -204,7 +204,7 @@ void checkExp(struct ASTNode* exp) {
             nestedExp -> data.num_indices == 0 && term -> data.num_indices == 0) {
             exp -> data.type = DATATYPE_BOOLEAN;
         } else {
-            printf("Faulty binary operation\n");
+            //printf("Faulty binary operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -218,7 +218,7 @@ void checkExp(struct ASTNode* exp) {
         } else if (nestedExp -> data.type == term -> data.type && nestedExp -> data.num_indices == term -> data.num_indices) {
             exp -> data.type = DATATYPE_BOOLEAN;
         } else {
-            printf("Faulty equals comparison operation\n");
+            //printf("Faulty equals comparison operation\n");
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
@@ -243,7 +243,7 @@ void checkTerm(struct ASTNode* term) {
             nestedTerm -> data.num_indices == 0 && factor -> data.num_indices == 0) {
             term -> data.type = DATATYPE_INT;
         } else {
-            printf("Faulty factor operation\n");
+            //printf("Faulty factor operation\n");
             reportTypeViolation(term -> data.line_no);
             term -> data.type = DATATYPE_UNDEFINED;
         }
@@ -277,7 +277,7 @@ void checkFactor(struct ASTNode* factor) {
         } else if (leftValue -> data.num_indices > 0) {
             factor -> data.type = DATATYPE_INT;
         } else {
-            printf("Faulty length operation\n");
+            //printf("Faulty length operation\n");
             reportTypeViolation(factor -> data.line_no);
             factor -> data.type = DATATYPE_UNDEFINED;
         }
@@ -289,7 +289,7 @@ void checkFactor(struct ASTNode* factor) {
         } else if (nestedFactor -> data.type == DATATYPE_INT && nestedFactor -> data.num_indices == 0) {
             factor -> data.type = DATATYPE_INT;
         } else {
-            printf("Faulty adjustment operation\n");
+            //printf("Faulty adjustment operation\n");
             reportTypeViolation(factor -> data.line_no);
             factor -> data.type = DATATYPE_UNDEFINED;
         }
@@ -301,7 +301,7 @@ void checkFactor(struct ASTNode* factor) {
         } else if (nestedFactor -> data.type == DATATYPE_BOOLEAN && nestedFactor -> data.num_indices == 0) {
             factor -> data.type = DATATYPE_BOOLEAN;
         } else {
-            printf("Faulty binary adjustment operation\n");
+            //printf("Faulty binary adjustment operation\n");
             reportTypeViolation(factor -> data.line_no);
             factor -> data.type = DATATYPE_UNDEFINED;
         }
@@ -390,7 +390,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
         
         // If method does not exist, return error
         if (!entry || entry -> type != ENTRYTYPE_METHOD) {
-            printf("Faulty method call (does not exist)\n");
+            //printf("Faulty method call (does not exist)\n");
             reportTypeViolation(methodCall -> data.line_no);
             methodCall -> data.type = DATATYPE_UNDEFINED;
         }
@@ -401,7 +401,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
         } else if (entry) {
             struct ASTNode * expList = methodCall -> children[0];
             if (expList -> node_type == NODETYPE_NULLABLE && entry -> num_args > 0) {
-                printf("Not enough arguments\n");
+                //printf("Not enough arguments\n");
                 reportTypeViolation(methodCall -> data.line_no);
             } else {
                 struct ASTNode * exp = expList -> children[0];
@@ -409,7 +409,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
                 
                 for (int i = 0; i < entry -> num_args; i++) {
                     if (!exp) {
-                        printf("Not enough arguments\n");
+                        //printf("Not enough arguments\n");
                         reportTypeViolation(methodCall -> data.line_no);
                         break;
                     } else {
@@ -417,7 +417,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
                         if (exp -> data.type == DATATYPE_UNDEFINED) {
                             break;
                         } else if (exp -> data.type != entry -> args[i] -> data_type || exp -> data.num_indices != entry -> args[i] -> num_indices) {
-                            printf("Invalid argument type\n");
+                            //printf("Invalid argument type\n");
                             reportTypeViolation(methodCall -> data.line_no);
                             break;
                         }
@@ -429,7 +429,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
                         exp = expTail -> children[0];
                         expTail = expTail -> children[1];
                         if (i == entry -> num_args - 1) {
-                            printf("Too many arguments\n");
+                            //printf("Too many arguments\n");
                             reportTypeViolation(methodCall -> data.line_no);
                             break;
                         }
@@ -445,7 +445,7 @@ void checkMethodCall(struct ASTNode* methodCall) {
         if (exp -> data.type == DATATYPE_STR) {
             methodCall -> data.type = DATATYPE_INT;
         } else {
-            printf("Faulty parse int (invalid typing)\n");
+            //printf("Faulty parse int (invalid typing)\n");
             reportTypeViolation(methodCall -> data.line_no);
             methodCall -> data.type = DATATYPE_UNDEFINED;
         }
@@ -466,7 +466,7 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
     createMethodScope(staticMethodDecl -> data.value.string_value, type -> data.type, type -> data.num_indices); // creates a new method scope   
     struct SymbolTableEntry * methodEntry = searchGlobalScope(staticMethodDecl -> data.value.string_value);
     if (methodEntry -> num_declarations > 0) {
-        printf("Method redeclaration\n");
+        //printf("Method redeclaration\n");
         reportTypeViolation(formalList -> data.line_no);
     }
     methodEntry -> num_declarations += 1;
@@ -477,7 +477,7 @@ void checkStaticMethodDecl(struct ASTNode* staticMethodDecl) {
             struct ASTNode * argType = arg -> children[0];
             struct SymbolTableEntry * argEntry = searchLocalScope(arg -> data.value.string_value);
             if (argEntry) {
-                printf("Duplicate arguments\n");
+                //printf("Duplicate arguments\n");
                 reportTypeViolation(formalList -> data.line_no);
             } else {
                 addToSymbolTable(arg -> data.value.string_value, ENTRYTYPE_VAR, argType -> data.type, argType -> data.num_indices);
@@ -509,7 +509,7 @@ int checkIndex(struct ASTNode* index) {
         checkExp(exp);
         
         if ((exp -> data.type != DATATYPE_INT || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
-            printf("Faulty index list\n");
+            //printf("Faulty index list\n");
             reportTypeViolation(exp -> data.line_no);
         }
     } else if (indexType == NODETYPE_INDEX) {
@@ -518,7 +518,7 @@ int checkIndex(struct ASTNode* index) {
         checkExp(exp);
 
         if ((exp -> data.type != DATATYPE_INT || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
-            printf("Faulty index\n");
+            //printf("Faulty index\n");
             reportTypeViolation(exp -> data.line_no);
         }
     }
@@ -534,7 +534,7 @@ void checkLeftValue(struct ASTNode* leftValue) {
         struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValueName);
         
         if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) { // if variable does not exist, throw error
-            printf("Variable does not exist %s\n", leftValueName);
+            //printf("Variable does not exist %s\n", leftValueName);
             reportTypeViolation(leftValue -> data.line_no);
             leftValue -> data.type = DATATYPE_UNDEFINED;
         } else {
@@ -548,13 +548,13 @@ void checkLeftValue(struct ASTNode* leftValue) {
         int changeOfIndices = checkIndex(index);
 
         if (!foundEntry || foundEntry -> type != ENTRYTYPE_VAR) { // if variable does not exist, throw error
-            printf("Faulty left value\n");
+            //printf("Faulty left value\n");
             reportTypeViolation(leftValue -> data.line_no);
             leftValue -> data.type = DATATYPE_UNDEFINED;
         } else if (foundEntry -> data_type == DATATYPE_UNDEFINED) { // if datatype is not defined, return undefined type
             leftValue -> data.type = DATATYPE_UNDEFINED;
         } else if (changeOfIndices > foundEntry -> num_indices) { // if indices not supported, throw error
-            printf("Variable does not support elicited indices\n");
+            //printf("Variable does not support elicited indices\n");
             reportTypeViolation(leftValue -> data.line_no);
             leftValue -> data.type = DATATYPE_UNDEFINED;
         } else {
@@ -592,7 +592,7 @@ void checkStatement(struct ASTNode* statement){
         struct ASTNode * exp = statement -> children[0];
         checkExp(exp);
         if (exp -> data.num_indices > 0 && exp -> data.type != DATATYPE_UNDEFINED) {
-            printf("Invalid parameters for print statement\n");
+            //printf("Invalid parameters for print statement\n");
             reportTypeViolation(statement -> data.line_no);
         }
     } else if (statementType == NODETYPE_VARDECL) {
@@ -609,7 +609,7 @@ void checkStatement(struct ASTNode* statement){
         struct ASTNode * secArgStatement = statement -> children[2];
         checkExp(exp);
         if ((exp -> data.type != DATATYPE_BOOLEAN || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
-            printf("Invalid if conditional\n");
+            //printf("Invalid if conditional\n");
             reportTypeViolation(statement -> data.line_no);
         }
         createScope(SCOPETYPE_LOCAL);
@@ -623,7 +623,7 @@ void checkStatement(struct ASTNode* statement){
         struct ASTNode * argStatement = statement -> children[1];
         checkExp(exp);
         if ((exp -> data.type != DATATYPE_BOOLEAN || exp -> data.num_indices > 0) && exp -> data.type != DATATYPE_UNDEFINED) {
-            printf("Invalid while conditional\n");
+            //printf("Invalid while conditional\n");
             reportTypeViolation(statement -> data.line_no);
         }
         createScope(SCOPETYPE_LOCAL);
@@ -636,7 +636,7 @@ void checkStatement(struct ASTNode* statement){
         checkExp(exp);
         if ((leftValue -> data.type != exp -> data.type || leftValue -> data.num_indices != exp -> data.num_indices) &&
             (exp -> data.type != DATATYPE_UNDEFINED && leftValue -> data.type != DATATYPE_UNDEFINED)) {
-            printf("Reassignment type mismatch\n");
+            //printf("Reassignment type mismatch\n");
             reportTypeViolation(statement -> data.line_no);
         }
     } else if (statementType == NODETYPE_RETURN) {
@@ -645,7 +645,7 @@ void checkStatement(struct ASTNode* statement){
         checkExp(exp);
         if ((exp -> data.type != methodScope -> data_type || exp -> data.num_indices != methodScope -> num_indices) &&
             !(exp -> data.type == DATATYPE_UNDEFINED || methodScope -> data_type == DATATYPE_UNDEFINED)) {
-            printf("Improper return statement\n");
+            //printf("Improper return statement\n");
             reportTypeViolation(statement -> data.line_no);
         }
     } else if (statementType == NODETYPE_METHODCALL) {
