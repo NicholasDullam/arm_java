@@ -340,7 +340,6 @@ void createMethodForwardReference(struct ASTNode* staticMethodDecl) {
     struct ASTNode * type = staticMethodDecl -> children[0];
     struct ASTNode * formalList = staticMethodDecl -> children[1];
     char * id = staticMethodDecl -> data.value.string_value;
-    enum DataType dataType = type -> data.type;
 
     // Check for duplicate method declarations
     struct SymbolTableEntry * foundEntry = searchGlobalScope(id);
@@ -348,7 +347,7 @@ void createMethodForwardReference(struct ASTNode* staticMethodDecl) {
         foundEntry -> data_type = DATATYPE_UNDEFINED;
     } else {
         // Create symbol table entry
-        struct SymbolTableEntry * entry = addToSymbolTable(id, ENTRYTYPE_METHOD, dataType, 0);
+        struct SymbolTableEntry * entry = addToSymbolTable(id, ENTRYTYPE_METHOD, type -> data.type, type -> data.num_indices);
 
         // Evaluate the formal list arguments
         if (formalList -> node_type != NODETYPE_NULLABLE) {
@@ -358,7 +357,7 @@ void createMethodForwardReference(struct ASTNode* staticMethodDecl) {
             // Navigate through arg_list adding arguments to entry
             while (arg) { 
                 struct ASTNode * argType = arg -> children[0];
-                entry -> args[entry -> num_args] = createArgument(arg -> data.value.string_value, argType -> data.type, arg -> data.num_indices);
+                entry -> args[entry -> num_args] = createArgument(arg -> data.value.string_value, argType -> data.type, argType -> data.num_indices);
                 entry -> num_args++;
                 
                 if (argList -> node_type == NODETYPE_NULLABLE) break;
@@ -406,17 +405,21 @@ void checkMethodCall(struct ASTNode* methodCall) {
             } else {
                 struct ASTNode * exp = expList -> children[0];
                 struct ASTNode * expTail = expList -> children[1];
+                bool typeViolationExists = false;
                 
                 for (int i = 0; i < entry -> num_args; i++) {
                     if (!exp) {
+                        typeViolationExists = true;
                         //printf("Not enough arguments\n");
                         reportTypeViolation(methodCall -> data.line_no);
                         break;
                     } else {
                         checkExp(exp);
                         if (exp -> data.type == DATATYPE_UNDEFINED) {
+                            typeViolationExists = true;
                             break;
                         } else if (exp -> data.type != entry -> args[i] -> data_type || exp -> data.num_indices != entry -> args[i] -> num_indices) {
+                            typeViolationExists = true;
                             //printf("Invalid argument type\n");
                             reportTypeViolation(methodCall -> data.line_no);
                             break;
@@ -428,12 +431,12 @@ void checkMethodCall(struct ASTNode* methodCall) {
                     } else {
                         exp = expTail -> children[0];
                         expTail = expTail -> children[1];
-                        if (i == entry -> num_args - 1) {
-                            //printf("Too many arguments\n");
-                            reportTypeViolation(methodCall -> data.line_no);
-                            break;
-                        }
                     }
+                }
+
+                if (exp && !typeViolationExists) {
+                    //printf("Too many arguments\n");
+                    reportTypeViolation(methodCall -> data.line_no);
                 }
             }
             
