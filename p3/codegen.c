@@ -28,7 +28,6 @@ void genMain(struct ASTNode * mainClass) {
     genMethodInit(statementList, "main");
     genStatementList(statementList);                                    // generate code for the given main function
     genMethodEnd(statementList);
-    exitScope();
 }
 
 void genStaticVarDeclList(struct ASTNode * staticVarDeclList) {
