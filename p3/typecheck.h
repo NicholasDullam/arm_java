@@ -6,6 +6,9 @@
 #define MAX_ARGUMENTS 10                    // max arguments for a given method entry
 
 #include "node.h"
+#include <stddef.h>
+
+extern struct ScopeEntry * head;
 
 enum ScopeType { SCOPETYPE_GLOBAL, SCOPETYPE_METHOD, SCOPETYPE_LOCAL };
 enum EntryType { ENTRYTYPE_CLASS, ENTRYTYPE_METHOD, ENTRYTYPE_VAR };
@@ -33,7 +36,7 @@ struct SymbolTableEntry {
     int length;                             // used to represent the length of an array datatype
     int num_args;                           // used to represent the length of the arguments array
     int num_indices;                        // used for tracking array types of table entries
-    int num_declarations;                       // used tracking method declarations and reporting method overloading at proper stage    
+    int num_declarations;                   // used tracking method declarations and reporting method overloading at proper stage    
     enum EntryType type;
     enum DataType data_type;
     struct ArgEntry * args[MAX_ARGUMENTS];
@@ -68,6 +71,7 @@ struct ArgEntry * createArgument(char * id, enum DataType data_type, int num_ind
     All scope handler functions
 */
 
+struct ScopeEntry * findMethodScope(char * id);
 void createScope(enum ScopeType type);
 void createMethodScope(char * id, enum DataType data_type, int num_indices);
 int addChildScope(struct ScopeEntry* parent, struct ScopeEntry * child);

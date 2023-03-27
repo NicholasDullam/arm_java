@@ -44,7 +44,8 @@ void checkMain(struct ASTNode* mainClass) {
 
     // Check the statements of the main function
     checkStatementList(mainClass->children[2]);
-    exitScope();
+    exitScope(); // exit local scope
+    exitScope(); // exit method scope
 }
 
 /*
@@ -753,6 +754,18 @@ struct SymbolTableEntry * searchGlobalScope(char* id) {
         struct SymbolTableEntry* symbol = findSymbol(curr, id);
         if (symbol) return symbol;
         curr = curr -> parent;
+    }
+    return NULL;
+}
+
+// Find a method scope within the current scope
+struct ScopeEntry * findMethodScope(char* id) {
+    struct ScopeEntry * curr = head;
+    for (int i = 0; i < curr -> num_children; i++) {
+        struct ScopeEntry * child = curr -> children[i];
+        if (child -> type == SCOPETYPE_METHOD && strcmp(id, child -> id) == 0) {
+            return child;
+        } 
     }
     return NULL;
 }

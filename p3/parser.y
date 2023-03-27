@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "typecheck.h"
+#include "codegen.h"
 #include "node.h"
-void yyerror(char *);
 
+void yyerror(char *);
 extern int yylex();
 
 // Global variables defined by lex.yy.c.
@@ -487,7 +488,7 @@ int main(int argc, char* argv[])
     if (num_errors != 0) return 1; 
 
     // Perform codegen
-    // codegen();
+    genProgram(root, argv[1]);
     
     return 0;
 }
