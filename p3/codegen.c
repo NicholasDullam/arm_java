@@ -9,11 +9,13 @@
     All general codegen functions
 */
 
+struct ASTNode * globalStaticVarDeclList = NULL;
+int globalDeclHead = 0;
+
 void genProgram(struct ASTNode * program, char * fileName) {
     struct ASTNode * class = program -> children[0];
     genMain(class); // begin the codegen traversal of AST
-    // perform post-order traversal of the AST and concat instructions
-    genTraversal(NULL, program);
+    genTraversal(NULL, program); // do post-order traversal of nodes to revise instructions
     genToFile(program -> data.instructions, program -> data.num_instructions, fileName); // push all instructions to file
 }
 
@@ -32,6 +34,16 @@ void genMain(struct ASTNode * mainClass) {
 
 void genStaticVarDeclList(struct ASTNode * staticVarDeclList) {
     if (staticVarDeclList -> node_type != NODETYPE_NULLABLE) {
+        if (globalStaticVarDeclList == NULL) {
+            globalStaticVarDeclList = staticVarDeclList;
+            char * instructions[] = { 
+                createInstruction(".section .text\n"),
+                createInstruction(".global main"),
+                createInstruction(".balign 4\n")
+            }; 
+            insertInstructions(globalStaticVarDeclList, instructions, 3);
+        }
+
         genStaticVarDeclList(staticVarDeclList -> children[0]);
         struct ASTNode * staticVarDecl = staticVarDeclList -> children[1];
         genStaticVarDecl(staticVarDecl);
@@ -67,12 +79,12 @@ void genStaticMethodDecl(struct ASTNode * staticMethodDecl) {
     genMethodEnd(staticMethodDecl);
 }
 
-void genFormalList(struct ASTNode * formalList) {
-    if (formalList -> node_type != NODETYPE_NULLABLE) {
-        // handle the variable and expression here
-        genFormalList(formalList -> children[1]);        
-    }
-}
+// void genFormalList(struct ASTNode * formalList) {
+//     if (formalList -> node_type != NODETYPE_NULLABLE) {
+//         // handle the variable and expression here
+//         genFormalList(formalList -> children[1]);        
+//     }
+// }
 
 void genStaticVarDecl(struct ASTNode * staticVarDecl) {
     struct ASTNode * varDecl = staticVarDecl -> children[0];
@@ -81,13 +93,16 @@ void genStaticVarDecl(struct ASTNode * staticVarDecl) {
 
 void genVarDecl(struct ASTNode * varDecl) {
     struct ASTNode * expDecl = varDecl -> children[1];
-    struct ASTNode * expList = varDecl -> children[2];
+    struct ASTNode * expList = varDecl -> children[2]; // check this
     genExpDecl(expDecl);
 }
 
 void genMethodCall(struct ASTNode * methodCall) {
-    // add in handling before branching for method call
-    // including the return symbolic register and return address
+    enum NodeType methodCallType = methodCall -> node_type;
+    if (methodCallType == NODETYPE_METHODCALL) {
+        // add in handling before branching for method call
+        // including the return symbolic register and return address
+    }
 }
 
 void genExpDecl(struct ASTNode * expDecl) {
