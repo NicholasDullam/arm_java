@@ -40,7 +40,7 @@ void genToFile(char * instructions[], int numInstructions, char * fileName);
 */
 
 char * createInstruction(char * instruction);
-void insertInstructions(struct ASTNode * node, char * instructions[], int numInstructions);
+void insertInstructions(struct ASTNode * node, char * instructions[], int numInstructions, int start);
 void appendInstructions(struct ASTNode * node, char * instructions[], int numInstructions);
 
 #endif

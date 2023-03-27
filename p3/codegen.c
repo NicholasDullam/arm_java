@@ -41,7 +41,7 @@ void genStaticVarDeclList(struct ASTNode * staticVarDeclList) {
                 createInstruction(".global main"),
                 createInstruction(".balign 4\n")
             }; 
-            insertInstructions(globalStaticVarDeclList, instructions, 3);
+            insertInstructions(globalStaticVarDeclList, instructions, 3, 0);
         }
 
         genStaticVarDeclList(staticVarDeclList -> children[0]);
@@ -234,7 +234,7 @@ void genTraversal(struct ASTNode * parent, struct ASTNode * curr) {
     }
 
     if (parent == NULL) return;
-    insertInstructions(parent, curr -> data.instructions, curr -> data.num_instructions);
+    insertInstructions(parent, curr -> data.instructions, curr -> data.num_instructions, 0);
 }
 
 void genToFile(char * instructions[], int numInstructions, char * fileName) {
@@ -259,17 +259,17 @@ char * createInstruction(char * instruction) {
     return reference;
 }
 
-void insertInstructions(struct ASTNode * node, char * instructions[], int numInstructions) {
+void insertInstructions(struct ASTNode * node, char * instructions[], int numInstructions, int start) {
     char * temp = NULL;    
     
     if (node -> data.num_instructions + numInstructions >= MAX_INSTRUCTIONS) return;
     for (int i = 0; i < numInstructions; i++) {
-        char * curr = node -> data.instructions[i];
-        if (i < numInstructions) node -> data.instructions[i] = instructions[i];
+        char * curr = node -> data.instructions[i + start];
+        if (i < numInstructions) node -> data.instructions[i + start] = instructions[i];
         int j = 0;
         while (curr) {
-            temp = node -> data.instructions[i + j * numInstructions];
-            node -> data.instructions[i + j * numInstructions] = curr;
+            temp = node -> data.instructions[i + start + j * numInstructions];
+            node -> data.instructions[i + start + j * numInstructions] = curr;
             curr = temp;
             j++;
         }
