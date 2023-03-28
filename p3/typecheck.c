@@ -713,7 +713,7 @@ int exitScope() {
 // As a child scope to the given parent scope
 int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
     if (!parent) return 0;
-    if (parent -> num_children < MAX_NUM_CHILDREN - 1) {
+    if (parent -> num_children < MAX_NUM_CHILDREN) {
         parent -> children[parent -> num_children] = child;
         parent -> num_children++;
         return 0;
@@ -759,14 +759,14 @@ struct SymbolTableEntry * searchGlobalScope(char* id) {
 }
 
 // Find a method scope within the current scope
-struct ScopeEntry * findMethodScope(char* id) {
-    struct ScopeEntry * curr = head;
-    for (int i = 0; i < curr -> num_children; i++) {
-        struct ScopeEntry * child = curr -> children[i];
-        if (child -> type == SCOPETYPE_METHOD && strcmp(id, child -> id) == 0) {
-            return child;
-        } 
+struct ScopeEntry * findMethodScope(char* id, struct ScopeEntry * scope) {
+    for (int i = 0; i < scope -> num_children; i++) {
+        struct ScopeEntry * child = scope -> children[i];
+        if (child -> type == SCOPETYPE_METHOD && strcmp(id, child -> id) == 0) return child;
+        struct ScopeEntry * found = findMethodScope(id, child);
+        if (found) return found;
     }
+
     return NULL;
 }
 
@@ -786,7 +786,7 @@ struct SymbolTableEntry * findSymbol(struct ScopeEntry * scope, char * id){
 
 // Add a symbol to the symbol table of the current scope head
 struct SymbolTableEntry * addToSymbolTable(char * id, enum EntryType type, enum DataType data_type, int num_indices){
-    if (head -> num_entries < MAX_TABLE_SIZE - 1) {
+    if (head -> num_entries < MAX_TABLE_SIZE) {
         struct SymbolTableEntry* entry = malloc(sizeof(struct SymbolTableEntry));
         entry -> id = id;
         entry -> type = type;

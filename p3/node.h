@@ -1,7 +1,6 @@
 #ifndef NODE_H
 #define NODE_H
 #define MAX_NUM_CHILDREN 3
-#define MAX_INSTRUCTIONS 10
 
 #include <stdbool.h>
 
@@ -20,10 +19,9 @@ static inline const char *type_string(enum DataType t) {
 
 struct SemanticData {
     enum DataType type;
-    char* instructions[MAX_INSTRUCTIONS];
-    int num_instructions;
     int num_indices;
     int line_no;
+    int offset;
     union value_t {
         char* string_value;
         int int_value;

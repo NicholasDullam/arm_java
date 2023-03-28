@@ -71,7 +71,7 @@ struct ArgEntry * createArgument(char * id, enum DataType data_type, int num_ind
     All scope handler functions
 */
 
-struct ScopeEntry * findMethodScope(char * id);
+struct ScopeEntry * findMethodScope(char * id, struct ScopeEntry * scope);
 void createScope(enum ScopeType type);
 void createMethodScope(char * id, enum DataType data_type, int num_indices);
 int addChildScope(struct ScopeEntry* parent, struct ScopeEntry * child);

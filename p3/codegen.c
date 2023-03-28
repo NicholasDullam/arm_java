@@ -7,46 +7,64 @@
 
 /*
     All general codegen functions
-*/
+*/ 
 
-struct ASTNode * globalStaticVarDeclList = NULL;
-int globalDeclHead = 0;
+struct InstructionEntry * instructionHead = NULL;
+int offset = 0;
+int depth = 0;
 
 void genProgram(struct ASTNode * program, char * fileName) {
     struct ASTNode * class = program -> children[0];
-    genMain(class); // begin the codegen traversal of AST
-    genTraversal(NULL, program); // do post-order traversal of nodes to revise instructions
-    genToFile(program -> data.instructions, program -> data.num_instructions, fileName); // push all instructions to file
+
+    // Handle codegen traversal of AST
+    genMain(class);
+
+    // Post-process the instruction tree
+    genTraversal(NULL, instructionHead);
+
+    // Push all instructions to .s file 
+    genToFile(instructionHead -> instructions, instructionHead -> num_instructions, fileName);
 }
 
 void genMain(struct ASTNode * mainClass) {
     struct ASTNode * staticVarDeclList = mainClass -> children[0];
     struct ASTNode * staticMethodDeclList = mainClass -> children[1];
     struct ASTNode * statementList = mainClass -> children[2];
+
+    // Create final coalesce instruction entry
+    createInstructionScope(mainClass, head);
     
-    genStaticVarDeclList(staticVarDeclList);                            // generate code for all static variable decl
-    genStaticMethodDeclList(staticMethodDeclList);                      // generate code for all static method decl
+    // Handle static variable instructions and .text section
+    createInstructionScope(staticVarDeclList, head);
+    createInstructionScope(staticVarDeclList, head);
+    addToInstructionEntry(".section .text\n");
+    addToInstructionEntry("printIntLn: .asciz \"%d\\n\"\n");
+    addToInstructionEntry("printStringLn: .asciz \"%s\\n\"\n");
+    addToInstructionEntry("printInt: .asciz \"%d\"\n");
+    addToInstructionEntry("printString: .asciz \"%s\"\n");
+    exitInstructionScope();
+    genStaticVarDeclList(staticVarDeclList); 
+    createInstructionScope(staticVarDeclList, head);
+    addToInstructionEntry("\n.global main\n");     
+    addToInstructionEntry(".balign 4\n\n");                            
+    exitInstructionScope();
+    exitInstructionScope();
     
+    // Handle static method instructions
+    genStaticMethodDeclList(staticMethodDeclList);                 
+
+    // Handle main method instructions
+    createInstructionScope(statementList, head);
     genMethodInit(statementList, "main");
-    genStatementList(statementList);                                    // generate code for the given main function
+    genStatementList(statementList);                                   
     genMethodEnd(statementList);
+    exitInstructionScope();
 }
 
 void genStaticVarDeclList(struct ASTNode * staticVarDeclList) {
     if (staticVarDeclList -> node_type != NODETYPE_NULLABLE) {
-        if (globalStaticVarDeclList == NULL) {
-            globalStaticVarDeclList = staticVarDeclList;
-            char * instructions[] = { 
-                createInstruction(".section .text\n"),
-                createInstruction(".global main"),
-                createInstruction(".balign 4\n")
-            }; 
-            insertInstructions(globalStaticVarDeclList, instructions, 3, 0);
-        }
-
         genStaticVarDeclList(staticVarDeclList -> children[0]);
-        struct ASTNode * staticVarDecl = staticVarDeclList -> children[1];
-        genStaticVarDecl(staticVarDecl);
+        genStaticVarDecl(staticVarDeclList -> children[1]);
     }
 }
 
@@ -68,27 +86,72 @@ void genStatementList(struct ASTNode * statementList) {
 
 void genStatement(struct ASTNode * statement) {
     enum NodeType statementType = statement -> node_type;
-    if (statementType == NODETYPE_VARDECL) {
-        printf("Var Decl\n");
-        genVarDecl(statement -> children[0]);
+    if (statementType == NODETYPE_VARDECL) { // if the assignemtn operation does not return an offset (as in, an offset to a temp variable), just store what is found in r0 rather than loading into r0
+        struct ASTNode * varDecl = statement -> children[0];
+        createInstructionScope(varDecl, head);
+        genVarDecl(varDecl);
+        char instruction[60];
+        sprintf(instruction, "str $t%d, %s @reconfigure to work with the rest\n", depth - 1, varDecl -> data.value.string_value);
+        addToInstructionEntry(instruction);
+        exitInstructionScope();
+        depth = 0;
+    } else if (statementType == NODETYPE_PRINT) {
+        struct ASTNode * exp = statement -> children[0];
+        createInstructionScope(statement, head);
+        if (exp -> data.type == DATATYPE_INT) {
+            addToInstructionEntry("ldr r0, =printInt\n");
+        } else if (exp -> data.type == DATATYPE_STR) {
+            addToInstructionEntry("ldr r0, =printString\n");
+        }
+        addToInstructionEntry("bl printf\n");
+        exitInstructionScope();
+    } else if (statementType == NODETYPE_PRINTLN) {
+        struct ASTNode * exp = statement -> children[0];
+        createInstructionScope(statement, head);
+        if (exp -> data.type == DATATYPE_INT) {
+            addToInstructionEntry("ldr r0, =printIntLn\n");
+        } else if (exp -> data.type == DATATYPE_STR) {
+            addToInstructionEntry("ldr r0, =printStringLn\n");
+        }
+        addToInstructionEntry("bl printf\n");
+        exitInstructionScope();
     }
 }
 
 void genStaticMethodDecl(struct ASTNode * staticMethodDecl) {
+    createInstructionScope(staticMethodDecl, head); // method instruction scope
     genMethodInit(staticMethodDecl, staticMethodDecl -> data.value.string_value);
     genMethodEnd(staticMethodDecl);
+    exitInstructionScope(); // exit method instruction scope
 }
 
-// void genFormalList(struct ASTNode * formalList) {
-//     if (formalList -> node_type != NODETYPE_NULLABLE) {
-//         // handle the variable and expression here
-//         genFormalList(formalList -> children[1]);        
-//     }
-// }
-
 void genStaticVarDecl(struct ASTNode * staticVarDecl) {
+    createInstructionScope(staticVarDecl, head);
     struct ASTNode * varDecl = staticVarDecl -> children[0];
-    genVarDecl(varDecl);
+
+    // work-around for the time-being
+    struct ASTNode * expDecl = varDecl -> children[1];
+    struct ASTNode * exp = expDecl -> children[0];
+    struct ASTNode * term = exp -> children[0];
+    struct ASTNode * factor = term -> children[0];
+
+    if (factor -> data.type == DATATYPE_INT) {
+        char instruction[4];
+        sprintf(instruction, "%d", factor -> data.value.int_value);
+        addToInstructionEntry(varDecl -> data.value.string_value);
+        addToInstructionEntry(": ");
+        addToInstructionEntry(".word ");
+        addToInstructionEntry(instruction);
+        addToInstructionEntry("\n");
+    } else if (factor -> data.type == DATATYPE_STR) {
+        addToInstructionEntry(varDecl -> data.value.string_value);
+        addToInstructionEntry(": ");
+        addToInstructionEntry(".asciz ");
+        addToInstructionEntry(factor -> data.value.string_value);
+        addToInstructionEntry("\n");
+    } 
+    
+    exitInstructionScope();
 }
 
 void genVarDecl(struct ASTNode * varDecl) {
@@ -117,12 +180,15 @@ void genExp(struct ASTNode * exp) {
     if (expType == NODETYPE_ADDOP) {
         struct ASTNode * nestedExp = exp -> children[0];
         struct ASTNode * term = exp -> children[1];
-        char * instructions[] = { 
-            createInstruction(""),
-            createInstruction("push {lr}\n"),
-        }; 
-
-        appendInstructions(exp, instructions, 2);
+        createInstructionScope(exp, head);
+        genExp(nestedExp);
+        genTerm(term);
+        addToInstructionEntry("add r2, r0, r1\n");
+        int newOffset = 4;
+        char instruction[20];
+        sprintf(instruction, "str r2, [sp, #%d]\n", newOffset);
+        addToInstructionEntry(instruction);
+        exitInstructionScope();
     } else if (expType == NODETYPE_TERM) {
         printf("Term\n");
         genTerm(exp -> children[0]);
@@ -136,24 +202,38 @@ void genTerm(struct ASTNode * term) {
     }
 }
 
+// make sure to use the offsets stored in the node value as reference for varDecl, and method calls
+
 void genFactor(struct ASTNode * factor) {
     enum NodeType factorType = factor -> node_type;
     if (factorType == NODETYPE_LITERAL) {
-        printf("Literal\n");
         if (factor -> data.type == DATATYPE_INT) {
-            char instruction[20];
-            sprintf(instruction, "ldr $t1, #%d\n", factor -> data.value.int_value);
-            char * instructions[] = { createInstruction(instruction) }; 
-            appendInstructions(factor, instructions, 1);
+            createInstructionScope(factor, head);
+            if (instructionHead -> num_child == 0) { // left child instructions
+                char instruction[20];
+                sprintf(instruction, "ldr r0, #%d\n", factor -> data.value.int_value);
+                addToInstructionEntry(instruction);            
+            } else { // right child instructions
+                char instruction[20];
+                sprintf(instruction, "ldr r1, #%d\n", factor -> data.value.int_value);
+                addToInstructionEntry(instruction);     
+            }
+            exitInstructionScope();        
         }
     } else if (factorType == NODETYPE_LEFTVALUE) {
+        createInstructionScope(factor, head);
         struct ASTNode * leftValue = factor -> children[0];
-        printf("Left Value\n");
         struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValue -> data.value.string_value);
-        char instruction[20];
-        sprintf(instruction, "ldr $t1, [sp, #%d]\n", 1);
-        char * instructions[] = { createInstruction(instruction) }; 
-        appendInstructions(factor, instructions, 1);
+        if (instructionHead -> num_child == 0) { // left child instructions
+            char instruction[40];
+            sprintf(instruction, "ldr r0, [sp, #%d] @replace with offsets\n", factor -> data.value.int_value); // replace with offsets assigned in local var prescreen
+            addToInstructionEntry(instruction);            
+        } else { // right child instructions
+            char instruction[40];
+            sprintf(instruction, "ldr r1, [sp, #%d] @replace with offsets\n", factor -> data.value.int_value); // replace with offsets assigned in local var prescreen
+            addToInstructionEntry(instruction);     
+        }
+        exitInstructionScope();
     }
 }
 
@@ -162,41 +242,24 @@ void genFactor(struct ASTNode * factor) {
 */
 
 void genMethodInit(struct ASTNode * node, char * id) {
-    struct ScopeEntry * methodScope = findMethodScope(id);
+    struct ScopeEntry * methodScope = findMethodScope(id, head);
+    if (!methodScope) return;
     head = methodScope -> children[0]; // navigate to the method local scope for symbol table context
     char branch[strlen(id) + 3];
     sprintf(branch, "%s:\n", id);
-    
-    char * ids[50] = { NULL };
-    genLocalVars(methodScope -> children[0], ids, 0);
-    char localInit[50];
-
-    for (int i = 0; i < 50; i++) {
-        if (ids[i] == NULL) break;
-        if (i == 0) sprintf(localInit, "@init %s", ids[i]);
-        else sprintf(localInit, "%s, %s", localInit, ids[i]);
-    }
-
-    localInit[strlen(localInit) + 1] = '\0';
-    localInit[strlen(localInit)] = '\n';
-
-    char * instructions[] = { 
-        createInstruction(branch),
-        createInstruction("push {lr}\n"),
-        //createInstruction(localInit) 
-    }; 
-
-    appendInstructions(node, instructions, 2);
-}
+    createInstructionScope(node, methodScope); // create a config instruction scope
+    addToInstructionEntry(branch);
+    addToInstructionEntry("push {lr}\n");
+    exitInstructionScope(); // exit the config instruction scope
+ }
 
 void genMethodEnd(struct ASTNode * node) {
-    char * instructions[] = { 
-        createInstruction("pop {pc}\n\n"),
-    }; 
-
-    appendInstructions(node, instructions, 1);
-    exitScope();
-    exitScope();
+    createInstructionScope(node, NULL); // method ending config instruction scope
+    addToInstructionEntry("pop {pc}\n\n");
+    exitInstructionScope(); // exit method ending config instruction scope
+    exitInstructionScope(); // exit method instruction scope
+    exitScope(); // exit local scope
+    exitScope(); // exit method scope
 }
 
 void genMethodVars(struct ScopeEntry * scope, char * ids[], int count) {
@@ -228,13 +291,13 @@ void genLocalVars(struct ScopeEntry * scope, char * ids[], int count) {
     }
 }
 
-void genTraversal(struct ASTNode * parent, struct ASTNode * curr) {
-    for (int i = 0; i < curr -> num_children; i++) {
+void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * curr) {
+    for (int i = curr -> num_children - 1; i >= 0; i--) {
         genTraversal(curr, curr -> children[i]);
     }
 
     if (parent == NULL) return;
-    insertInstructions(parent, curr -> data.instructions, curr -> data.num_instructions, 0);
+    for (int i = 0; i < curr -> num_instructions; i++) insertInstruction(parent, curr -> instructions[i], i);
 }
 
 void genToFile(char * instructions[], int numInstructions, char * fileName) {
@@ -259,29 +322,59 @@ char * createInstruction(char * instruction) {
     return reference;
 }
 
-void insertInstructions(struct ASTNode * node, char * instructions[], int numInstructions, int start) {
-    char * temp = NULL;    
-    
-    if (node -> data.num_instructions + numInstructions >= MAX_INSTRUCTIONS) return;
-    for (int i = 0; i < numInstructions; i++) {
-        char * curr = node -> data.instructions[i + start];
-        if (i < numInstructions) node -> data.instructions[i + start] = instructions[i];
-        int j = 0;
-        while (curr) {
-            temp = node -> data.instructions[i + start + j * numInstructions];
-            node -> data.instructions[i + start + j * numInstructions] = curr;
-            curr = temp;
-            j++;
-        }
+void insertInstruction(struct InstructionEntry * instructionScope, char * instruction, int start) {
+    if (instructionScope -> num_instructions + 1 >= MAX_INSTRUCTIONS) {
+        printf("Hit max instructions for node\n");
+        return;
     }
 
-    node -> data.num_instructions += numInstructions;
+    int iterator = start;
+    char * temp = NULL;    
+    char * curr = instructionScope -> instructions[iterator];
+    instructionScope -> instructions[iterator] = instruction;
+    iterator++;
+
+    while (curr) {
+        temp = instructionScope -> instructions[iterator];
+        instructionScope -> instructions[iterator] = curr;
+        curr = temp;
+        iterator++;
+    }
+
+    instructionScope -> num_instructions++;
 }
 
-void appendInstructions(struct ASTNode * node, char * instructions[], int numInstructions) {
-    if (node -> data.num_instructions + numInstructions >= MAX_INSTRUCTIONS) return;
-    for (int i = 0; i < numInstructions; i++) {
-        node -> data.instructions[i + node -> data.num_instructions] = instructions[i];
+/*
+    New instruction helper functions
+*/
+
+void addToInstructionEntry(char * instruction) {
+    char * reference = (char *) malloc(sizeof(char) * strlen(instruction));
+    strcpy(reference, instruction);
+    instructionHead -> instructions[instructionHead -> num_instructions] = reference;
+    instructionHead -> num_instructions++;
+}
+
+void createInstructionScope(struct ASTNode * node, struct ScopeEntry * scope) {
+    struct InstructionEntry * child = malloc(sizeof(struct InstructionEntry));
+    memset(child, 0, sizeof(struct InstructionEntry));
+    addChildInstructionScope(instructionHead, child);
+    child -> parent = instructionHead;
+    child -> scope = scope;
+    child -> node = node;
+    child -> num_instructions = 0;
+    child -> num_children = 0;
+    if (child -> parent) child -> num_child = child -> parent -> num_children - 1;
+    instructionHead = child;
+}
+
+void addChildInstructionScope(struct InstructionEntry * parent, struct InstructionEntry * child) {
+    if (parent && parent -> num_children < MAX_SCOPED_CHILDREN) {
+        parent -> children[parent -> num_children] = child;
+        parent -> num_children++;
     }
-    node -> data.num_instructions += numInstructions;
+}
+
+void exitInstructionScope() {
+    if (instructionHead -> parent) instructionHead = instructionHead -> parent;
 }
