@@ -8,12 +8,21 @@
 
 extern struct InstructionEntry * instructionHead;
 
+enum ResponseType {
+    RESPONSE_TYPE_GLOBAL,
+    RESPONSE_TYPE_LOCAL,
+    RESPONSE_TYPE_TEMP
+};
+
 struct InstructionEntry {
     char * instructions[MAX_INSTRUCTIONS];
     struct ScopeEntry * scope;
     struct ASTNode * node;
     struct InstructionEntry * children[MAX_SCOPED_CHILDREN];
     struct InstructionEntry * parent;
+    enum ResponseType response_type;
+    char * id;
+    int temp_id;
     int num_child;
     int num_children;
     int num_instructions;
