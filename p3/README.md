@@ -9,3 +9,7 @@ adjust the left value assignment to just include the name of the variable (assig
 # Project 3 Overview
 
 grab command line arguments by using the index value * 4 + base_offset for the argument
+
+make sure to handle unary operators
+
+then should be done!
