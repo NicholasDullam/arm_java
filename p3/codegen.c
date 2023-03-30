@@ -39,7 +39,7 @@ void genMain(struct ASTNode * mainClass) {
     // Handle static variable instructions and .text section
     createInstructionScope(staticVarDeclList, head);
     createInstructionScope(staticVarDeclList, head);
-    addToInstructionEntry(".section .text\n");
+    addToInstructionEntry(".section .data\n");
     addToInstructionEntry("printIntLn: .asciz \"%d\\n\"\n");
     addToInstructionEntry("printStringLn: .asciz \"%s\\n\"\n");
     addToInstructionEntry("printInt: .asciz \"%d\"\n");
@@ -47,7 +47,8 @@ void genMain(struct ASTNode * mainClass) {
     exitInstructionScope();
     genStaticVarDeclList(staticVarDeclList); 
     createInstructionScope(staticVarDeclList, head);
-    addToInstructionEntry("\n.global main\n");     
+    addToInstructionEntry("\n.section .text\n");     
+    addToInstructionEntry(".global main\n");     
     addToInstructionEntry(".balign 4\n\n");                            
     exitInstructionScope();
     exitInstructionScope();
@@ -103,6 +104,9 @@ void genStatement(struct ASTNode * statement) {
         char instruction[60];
         sprintf(instruction, "str $t%d, %s @reconfigure to work with the rest\n", tempCount, varDecl -> data.value.string_value);
         addToInstructionEntry(instruction);
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        instructionHead -> id = varDecl -> data.value.string_value;
 
         tempCount++;
         exitInstructionScope();
@@ -169,6 +173,8 @@ void genStatement(struct ASTNode * statement) {
         char instruction[20];
         sprintf(instruction, "ldr r0, $t%d\n", arg -> temp_id);
         addToInstructionEntry(instruction);
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
 
         exitInstructionScope();
     }
@@ -427,6 +433,7 @@ void genFactor(struct ASTNode * factor) {
 
         // Provide the metadata for later instruction parsing
         instructionHead -> temp_id = tempCount;
+        instructionHead -> id = leftValue -> data.value.string_value;
         if (foundEntry -> var_type == VARTYPE_LOCAL || foundEntry -> var_type == VARTYPE_ARG) instructionHead -> response_type = RESPONSETYPE_LOCAL;
         else if (foundEntry -> var_type == VARTYPE_GLOBAL) instructionHead -> response_type = RESPONSETYPE_GLOBAL;
         tempCount++;
@@ -447,6 +454,10 @@ void genMethodInit(struct ASTNode * node, char * id) {
     struct ScopeEntry * methodScope = findMethodScope(id, head);
     char branch[strlen(id) + 3];
     sprintf(branch, "%s:\n", id);
+
+    instructionHead -> response_type = RESPONSETYPE_METHOD;
+    instructionHead -> id = id;
+
     createInstructionScope(node, methodScope); // create a config instruction scope
     addToInstructionEntry(branch);
     addToInstructionEntry("push {lr}\n"); 
@@ -468,11 +479,6 @@ void genMethodInit(struct ASTNode * node, char * id) {
 
     head = methodScope -> children[0]; // navigate to the method local scope for symbol table context
     genLocalVars(head);
-
-    // Define offsets of local variables
-
-    instructionHead -> response_type = RESPONSETYPE_METHOD;
-
     exitInstructionScope(); // exit the config instruction scope
  }
 
@@ -491,6 +497,7 @@ void genMethodEnd(struct ASTNode * node, char * id) {
     exitScope(); // exit method scope
 }
 
+// Apply offsets to local variables
 void genLocalVars(struct ScopeEntry * scope) {
     if (scope == NULL) return;
 
@@ -506,6 +513,7 @@ void genLocalVars(struct ScopeEntry * scope) {
     }
 }
 
+// Generate unoptimized ARM assembly from 3AC
 void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * curr) {
     for (int i = curr -> num_children - 1; i >= 0; i--) genTraversal(curr, curr -> children[i]);
 
@@ -514,13 +522,25 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
 
     // Insert instructions to children as parent (inserting offset information for allocating stack variables)
     if (curr -> response_type == RESPONSETYPE_METHOD) {
-        struct SymbolTableEntry * foundMethod = searchGlobalScope(curr -> scope -> id);
-       
-        // char instruction[40];
-        // sprintf(instruction, "SP r0, %s\n", foundMethod -> args[i] -> id); // replace with offsets assigned in local var prescreen
-        // addToInstructionEntry(instruction);  
-        
-        // insertInstruction(curr -> children[0], )
+        struct SymbolTableEntry * foundMethod = searchGlobalScope(curr -> id);
+        struct InstructionEntry * config1 = curr -> children[0];
+        struct InstructionEntry * config2 = curr -> children[curr -> num_children - 1];
+
+        // Insert allocation after pushing return reference
+        char instruction[50];
+        sprintf(instruction, "sub sp, sp, #%d\n", foundMethod -> offset);
+        insertInstruction(curr, createInstruction(instruction), 2);
+        memset(instruction, 0, strlen(instruction));
+
+        for (int i = 0; i < foundMethod -> num_args; i++) {
+            sprintf(instruction, "str r%d, [sp, #%d]\n", i, 4 * i);
+            curr -> instructions[i + 3] = createInstruction(instruction);
+            memset(instruction, 0, strlen(instruction));
+        }
+
+        // Insert deallocation at the last config
+        sprintf(instruction, "add sp, sp, #%d\n", foundMethod -> offset);
+        insertInstruction(curr, createInstruction(instruction), curr -> num_instructions - 1);
     }
 
     // Grab the sum of the child instruction entries to exclude re-evaluation
@@ -550,6 +570,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
                     curr -> num_instructions++;
+
                     instruction = genLoadChildNode(arg2, arg2 -> num_child);
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
@@ -558,11 +579,12 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     // Insert general operation instruction
                     insertInstruction(parent, createInstruction("add r2, r0, r1\n"), iterator);
                     iterator++;
+                    curr -> num_instructions++;
 
                     // Add storage operation instruction
-                    char instruction[40];
-                    sprintf(instruction, "str r2, [sp, #%d]\n", curr -> offset);
-                    insertInstruction(parent, createInstruction(instruction), iterator);
+                    char storeInstruction[40];
+                    sprintf(storeInstruction, "str r2, [sp, #%d]\n", curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 } else if (curr -> node -> node_type == NODETYPE_SUBOP) {
                     struct InstructionEntry * arg1 = curr -> children[0];
                     struct InstructionEntry * arg2 = curr -> children[1];
@@ -581,11 +603,12 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     // Insert general operation instruction
                     insertInstruction(parent, createInstruction("sub r2, r0, r1\n"), iterator);
                     iterator++;
+                    curr -> num_instructions++;
 
                     // Add storage operation instruction
-                    char instruction[40];
-                    sprintf(instruction, "str r2, [sp, #%d]\n", curr -> offset);
-                    insertInstruction(parent, createInstruction(instruction), iterator);
+                    char storeInstruction[40];
+                    sprintf(storeInstruction, "str r2, [sp, #%d]\n", curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 } else if (curr -> node -> node_type == NODETYPE_MULOP) {
                     struct InstructionEntry * arg1 = curr -> children[0];
                     struct InstructionEntry * arg2 = curr -> children[1];
@@ -596,6 +619,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
                     curr -> num_instructions++;
+                    
                     instruction = genLoadChildNode(arg2, arg2 -> num_child);
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
@@ -604,11 +628,12 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     // Insert general operation instruction
                     insertInstruction(parent, createInstruction("mul r2, r0, r1\n"), iterator);
                     iterator++;
-                    
+                    curr -> num_instructions++;
+
                     // Add storage operation instruction
-                    char instruction[40];
-                    sprintf(instruction, "str r2, [sp, #%d]\n", curr -> offset);
-                    insertInstruction(parent, createInstruction(instruction), iterator);
+                    char storeInstruction[40];
+                    sprintf(storeInstruction, "str r2, [sp, #%d]\n", curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 } else if (curr -> node -> node_type == NODETYPE_DIVOP) {
                     struct InstructionEntry * arg1 = curr -> children[0];
                     struct InstructionEntry * arg2 = curr -> children[1];
@@ -619,6 +644,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
                     curr -> num_instructions++;
+                    
                     instruction = genLoadChildNode(arg2, arg2 -> num_child);
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
@@ -627,22 +653,31 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     // Insert general operation instruction
                     insertInstruction(parent, createInstruction("div r2, r0, r1\n"), iterator);
                     iterator++;
+                    curr -> num_instructions++;
 
                     // Add storage operation instruction
-                    char instruction[40];
-                    sprintf(instruction, "str r2, [sp, #%d]\n", curr -> offset);
-                    insertInstruction(parent, createInstruction(instruction), iterator);
+                    char storeInstruction[40];
+                    sprintf(storeInstruction, "str r2, [sp, #%d]\n", curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 } else if (curr -> node -> node_type == NODETYPE_METHODCALL) {                    
                     // Iterate through children and reformat the register loads
-                    for (int i = 0; i < curr -> num_children; i++) {
-                        struct InstructionEntry * arg = curr -> children[i];
-                        char * instruction = genLoadChildNode(arg, i);
+                    for (int j = 0; j < curr -> num_children; j++) {
+                        struct InstructionEntry * arg = curr -> children[j];
+                        char * instruction = genLoadChildNode(arg, j);
+                        insertInstruction(parent, instruction, iterator);
                         iterator++;
                         i++;
                     }
 
                     // Finally insert the original branch and link instruction
                     insertInstruction(parent, curr -> instructions[iterator], iterator);
+                    iterator++;
+                    i++;
+
+                    // Add storage operation instruction
+                    char storeInstruction[40];
+                    sprintf(storeInstruction, "str r0, [sp, #%d]\n", curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 } else if (curr -> node -> node_type == NODETYPE_PRINT || curr -> node -> node_type == NODETYPE_PRINTLN) {
                     struct InstructionEntry * arg1 = curr -> children[0];
                     char * instruction;
@@ -661,7 +696,23 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     // Insert the third instruction (unchanged)
                     insertInstruction(parent, curr -> instructions[iterator], iterator);
                 } else if (curr -> node -> node_type == NODETYPE_VARDECL) {
-                    insertInstruction(parent, curr -> instructions[iterator], iterator);
+                    // Load the expression into register
+                    char * instruction;
+                    instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    
+                    // Add storage operation instruction
+                    head = curr -> scope;
+                    struct SymbolTableEntry * foundVariable = searchGlobalScope(curr -> id);
+                    char storeInstruction[40];
+                    sprintf(storeInstruction, "str r0, [sp, #%d]\n", foundVariable -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_RETURN) {
+                    char * instruction;
+                    instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
+                    insertInstruction(parent, instruction, iterator);
                 }
             } else {
                 insertInstruction(parent, curr -> instructions[iterator], iterator);
@@ -675,17 +726,23 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
 }
 
 char * genLoadChildNode(struct InstructionEntry * leaf, int reg) {
-    char instruction[40];
+    char instruction[100];
     
     if (leaf -> response_type == RESPONSETYPE_LITERAL) {
-        sprintf(instruction, "ldr r%d, #%d @ literal declaration\n", reg, leaf -> node -> data.value.int_value); 
+        sprintf(instruction, "mov r%d, #%d @ literal declaration\n", reg, leaf -> node -> data.value.int_value); 
     } else if (leaf -> response_type == RESPONSETYPE_LOCAL) {
+        head = leaf -> scope;
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
         sprintf(instruction, "ldr r%d, [sp, #%d] @ local reference\n", reg, found -> offset); 
     } else if (leaf -> response_type == RESPONSETYPE_GLOBAL) {
-        sprintf(instruction, "ldr r%d, =%s @ global reference\n", reg, leaf -> id);    
+        struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
+        if (found -> data_type == DATATYPE_INT) {
+            sprintf(instruction, "ldr r%d, =%s @ global reference\nldr r%d, [r%d, #0]\n", reg, leaf -> id, reg, reg);    
+        } else {
+            sprintf(instruction, "ldr r%d, =%s @ global reference\n", reg, leaf -> id);    
+        }
     } else {
-        sprintf(instruction, "ldr r%d, =[sp, #%d] @ temp reference\n", reg, leaf -> offset);
+        sprintf(instruction, "ldr r%d, [sp, #%d] @ temp reference\n", reg, leaf -> offset);
     } 
     
     return createInstruction(instruction);
