@@ -10,8 +10,7 @@
 */ 
 
 struct InstructionEntry * instructionHead = NULL;
-int offset = 0;
-int depth = 0;
+int tempCount = 0;
 
 void genProgram(struct ASTNode * program, char * fileName) {
     struct ASTNode * class = program -> children[0];
@@ -89,31 +88,69 @@ void genStatement(struct ASTNode * statement) {
     if (statementType == NODETYPE_VARDECL) { // if the assignemtn operation does not return an offset (as in, an offset to a temp variable), just store what is found in r0 rather than loading into r0
         struct ASTNode * varDecl = statement -> children[0];
         createInstructionScope(varDecl, head);
+
+        // Incorporate the nested expression instructions into the current instruction scope
         genVarDecl(varDecl);
+        
+        // Create the instruction for the variable declaration
         char instruction[60];
-        sprintf(instruction, "str $t%d, %s @reconfigure to work with the rest\n", depth - 1, varDecl -> data.value.string_value);
+        sprintf(instruction, "str $t%d, %s @reconfigure to work with the rest\n", tempCount, varDecl -> data.value.string_value);
         addToInstructionEntry(instruction);
+
+        tempCount++;
         exitInstructionScope();
-        depth = 0;
     } else if (statementType == NODETYPE_PRINT) {
         struct ASTNode * exp = statement -> children[0];
         createInstructionScope(statement, head);
+
+        // Incorporate the nested expression instructions into the current instruction scope
+        genExp(exp);
+
+        // Change the global reference depending on the type of expression
         if (exp -> data.type == DATATYPE_INT) {
             addToInstructionEntry("ldr r0, =printInt\n");
         } else if (exp -> data.type == DATATYPE_STR) {
             addToInstructionEntry("ldr r0, =printString\n");
         }
+
+        char instruction[60];
+        sprintf(instruction, "ldr r1, $t%d\n", instructionHead -> children[0] -> temp_id);
+        addToInstructionEntry(instruction);        
+        
         addToInstructionEntry("bl printf\n");
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+
         exitInstructionScope();
     } else if (statementType == NODETYPE_PRINTLN) {
         struct ASTNode * exp = statement -> children[0];
         createInstructionScope(statement, head);
+        
+        // Incorporate the nested expression instructions into the current instruction scope
+        genExp(exp);
+
+        // Change the global reference depending on the type of expression
         if (exp -> data.type == DATATYPE_INT) {
             addToInstructionEntry("ldr r0, =printIntLn\n");
         } else if (exp -> data.type == DATATYPE_STR) {
             addToInstructionEntry("ldr r0, =printStringLn\n");
         }
+
+        char instruction[60];
+        sprintf(instruction, "ldr r1, $t%d\n", instructionHead -> children[0] -> temp_id);
+        addToInstructionEntry(instruction);
+
         addToInstructionEntry("bl printf\n");
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+
+        exitInstructionScope();
+    } else if (statementType == NODETYPE_METHODCALL) {
+        genMethodCall(statement -> children[0]);
+    } else if (statementType == NODETYPE_RETURN) {
+        createInstructionScope(statement, head);
+        genExp(statement -> children[0]);
+        // insert temp inst here
         exitInstructionScope();
     }
 }
@@ -129,11 +166,15 @@ void genStaticVarDecl(struct ASTNode * staticVarDecl) {
     createInstructionScope(staticVarDecl, head);
     struct ASTNode * varDecl = staticVarDecl -> children[0];
 
-    // work-around for the time-being
+    // Work-around for the time-being
     struct ASTNode * expDecl = varDecl -> children[1];
     struct ASTNode * exp = expDecl -> children[0];
     struct ASTNode * term = exp -> children[0];
     struct ASTNode * factor = term -> children[0];
+
+    // Change the symbol table entry to record global variables
+    struct SymbolTableEntry * found = searchGlobalScope(varDecl -> data.value.string_value);
+    found -> var_type = VARTYPE_GLOBAL;
 
     if (factor -> data.type == DATATYPE_INT) {
         char instruction[4];
@@ -163,8 +204,31 @@ void genVarDecl(struct ASTNode * varDecl) {
 void genMethodCall(struct ASTNode * methodCall) {
     enum NodeType methodCallType = methodCall -> node_type;
     if (methodCallType == NODETYPE_METHODCALL) {
+        createInstructionScope(methodCall, head);
+        struct SymbolTableEntry * found = searchGlobalScope(methodCall -> data.value.string_value);
+        struct ASTNode * expList = methodCall -> children[0];
+        struct ASTNode * exp = expList -> children[0];
+        struct ASTNode * expTail = expList -> children[1];
+
+        if (found -> num_args > 0) {
+            while (exp) {
+                genExp(exp);
+                exp = expTail -> children[0];
+                if (exp) expTail = expTail -> children[1];
+            }
+        }
+
         // add in handling before branching for method call
         // including the return symbolic register and return address
+
+        // Create the instruction for the expression operation
+        char instruction[20];
+        sprintf(instruction, "bl %s\n", methodCall -> data.value.string_value);
+        addToInstructionEntry(instruction);
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+
+        exitInstructionScope();
     }
 }
 
@@ -181,14 +245,50 @@ void genExp(struct ASTNode * exp) {
         struct ASTNode * nestedExp = exp -> children[0];
         struct ASTNode * term = exp -> children[1];
         createInstructionScope(exp, head);
+        
+        // Incorporate the nested expression instructions into the current instruction scope
         genExp(nestedExp);
         genTerm(term);
-        addToInstructionEntry("add r2, r0, r1\n");
-        int newOffset = 4;
+        
+        // Define the arguments of the child scopes
+        int arg1 = instructionHead -> children[0] -> temp_id;
+        int arg2 = instructionHead -> children[1] -> temp_id;
+
+        // Create the instruction for the expression operation
         char instruction[20];
-        sprintf(instruction, "str r2, [sp, #%d]\n", newOffset);
+        sprintf(instruction, "add $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
         addToInstructionEntry(instruction);
+        
+        // Provide the metadata for later instruction parsing
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        tempCount++;
+
         exitInstructionScope();
+    } else if (expType == NODETYPE_SUBOP) {
+        struct ASTNode * nestedExp = exp -> children[0];
+        struct ASTNode * term = exp -> children[1];
+        createInstructionScope(exp, head);
+        
+        // Incorporate the nested expression instructions into the current instruction scope
+        genExp(nestedExp);
+        genTerm(term);
+        
+        // Define the arguments of the child scopes
+        int arg1 = instructionHead -> children[0] -> temp_id;
+        int arg2 = instructionHead -> children[1] -> temp_id;
+
+        // Create the instruction for the expression operation
+        char instruction[20];
+        sprintf(instruction, "sub $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
+        addToInstructionEntry(instruction);
+        
+        // Provide the metadata for later instruction parsing
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        tempCount++;
+
+        exitInstructionScope(); 
     } else if (expType == NODETYPE_TERM) {
         printf("Term\n");
         genTerm(exp -> children[0]);
@@ -197,7 +297,55 @@ void genExp(struct ASTNode * exp) {
 
 void genTerm(struct ASTNode * term) {
     enum NodeType termType = term -> node_type;
-    if (termType == NODETYPE_FACTOR) {
+    if (termType == NODETYPE_MULOP) {
+        struct ASTNode * nestedTerm = term -> children[0];
+        struct ASTNode * factor = term -> children[1];
+        createInstructionScope(term, head);
+        
+        // Incorporate the nested expression instructions into the current instruction scope
+        genTerm(nestedTerm);
+        genFactor(factor);
+        
+        // Define the arguments of the child scopes
+        int arg1 = instructionHead -> children[0] -> temp_id;
+        int arg2 = instructionHead -> children[1] -> temp_id;
+
+        // Create the instruction for the expression operation
+        char instruction[20];
+        sprintf(instruction, "mul $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
+        addToInstructionEntry(instruction);
+        
+        // Provide the metadata for later instruction parsing
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        tempCount++;
+
+        exitInstructionScope(); 
+    } else if (termType == NODETYPE_DIVOP) {
+        struct ASTNode * nestedTerm = term -> children[0];
+        struct ASTNode * factor = term -> children[1];
+        createInstructionScope(term, head);
+        
+        // Incorporate the nested expression instructions into the current instruction scope
+        genTerm(nestedTerm);
+        genFactor(factor);
+        
+        // Define the arguments of the child scopes
+        int arg1 = instructionHead -> children[0] -> temp_id;
+        int arg2 = instructionHead -> children[1] -> temp_id;
+
+        // Create the instruction for the expression operation
+        char instruction[20];
+        sprintf(instruction, "mul $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
+        addToInstructionEntry(instruction);
+        
+        // Provide the metadata for later instruction parsing
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        tempCount++;
+
+        exitInstructionScope(); 
+    } else if (termType == NODETYPE_FACTOR) {
         genFactor(term -> children[0]);
     }
 }
@@ -207,33 +355,40 @@ void genTerm(struct ASTNode * term) {
 void genFactor(struct ASTNode * factor) {
     enum NodeType factorType = factor -> node_type;
     if (factorType == NODETYPE_LITERAL) {
-        if (factor -> data.type == DATATYPE_INT) {
-            createInstructionScope(factor, head);
-            if (instructionHead -> num_child == 0) { // left child instructions
-                char instruction[20];
-                sprintf(instruction, "ldr r0, #%d\n", factor -> data.value.int_value);
-                addToInstructionEntry(instruction);            
-            } else { // right child instructions
-                char instruction[20];
-                sprintf(instruction, "ldr r1, #%d\n", factor -> data.value.int_value);
-                addToInstructionEntry(instruction);     
-            }
-            exitInstructionScope();        
-        }
-    } else if (factorType == NODETYPE_LEFTVALUE) {
         createInstructionScope(factor, head);
+
+        // Create the instruction for temporary literal
+        char instruction[20];
+        sprintf(instruction, "ldr $t%d, #%d\n", tempCount, factor -> data.value.int_value);
+        addToInstructionEntry(instruction);  
+
+        // Provide metadata for later instruction parsing          
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> response_type = RESPONSETYPE_LITERAL; // change if global variable
+        tempCount++;
+
+        exitInstructionScope();
+    } else if (factorType == NODETYPE_LEFTVALUE) {
         struct ASTNode * leftValue = factor -> children[0];
         struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValue -> data.value.string_value);
-        if (instructionHead -> num_child == 0) { // left child instructions
-            char instruction[40];
-            sprintf(instruction, "ldr r0, [sp, #%d] @replace with offsets\n", factor -> data.value.int_value); // replace with offsets assigned in local var prescreen
-            addToInstructionEntry(instruction);            
-        } else { // right child instructions
-            char instruction[40];
-            sprintf(instruction, "ldr r1, [sp, #%d] @replace with offsets\n", factor -> data.value.int_value); // replace with offsets assigned in local var prescreen
-            addToInstructionEntry(instruction);     
-        }
+        createInstructionScope(factor, head);
+
+        // Create the instruction for the temporary variable reference
+        char instruction[40];
+        sprintf(instruction, "mov $t%d, %s\n", tempCount, leftValue -> data.value.string_value); // replace with offsets assigned in local var prescreen
+        addToInstructionEntry(instruction);   
+
+        // Provide the metadata for later instruction parsing
+        instructionHead -> temp_id = tempCount;
+        if (foundEntry -> var_type == VARTYPE_LOCAL || foundEntry -> var_type == VARTYPE_ARG) instructionHead -> response_type = RESPONSETYPE_LOCAL;
+        else if (foundEntry -> var_type == VARTYPE_GLOBAL) instructionHead -> response_type = RESPONSETYPE_GLOBAL;
+        tempCount++;
+
         exitInstructionScope();
+    } else if (factorType == NODETYPE_METHODCALL) {
+        genMethodCall(factor -> children[0]);
+    } else if (factorType == NODETYPE_EXP) {
+        genExp(factor -> children[0]);
     }
 }
 
@@ -249,7 +404,10 @@ void genMethodInit(struct ASTNode * node, char * id) {
     sprintf(branch, "%s:\n", id);
     createInstructionScope(node, methodScope); // create a config instruction scope
     addToInstructionEntry(branch);
-    addToInstructionEntry("push {lr}\n");
+    addToInstructionEntry("push {lr}\n"); 
+    
+    // generate arguments here (and track the local variables for the entire method for use in the offsets)
+
     exitInstructionScope(); // exit the config instruction scope
  }
 
@@ -297,7 +455,132 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
     }
 
     if (parent == NULL) return;
-    for (int i = 0; i < curr -> num_instructions; i++) insertInstruction(parent, curr -> instructions[i], i);
+
+    // Grab the sum of the child instruction entries to exclude re-evaluation
+    int childInstructions = 0;
+    for (int i = 0; i < curr -> num_children; i++) childInstructions += curr -> children[i] -> num_instructions;
+
+    int iterator = 0;
+    int original_length = curr -> num_instructions;
+
+    // Handle all post-processing for the 3AC instructions
+    for (int i = 0; i < original_length; i++) {
+        if (i >= childInstructions) {
+            if (curr -> response_type == RESPONSETYPE_LITERAL) { // literal var reference
+                curr -> num_instructions -= 1; // since we are not using anymore instructions here, simply return
+            } else if (curr -> response_type == RESPONSETYPE_LOCAL) { // local var reference
+                curr -> num_instructions -= 1; // since we are not using anymore instructions here, simply return
+            } else if (curr -> response_type == RESPONSETYPE_GLOBAL) { // global var reference
+                curr -> num_instructions -= 1; // since we are not using anymore instructions here, simply return
+            } else if (curr -> response_type == RESPONSETYPE_TEMP) { // intermediary result (all operation handlers)
+                if (curr -> node -> node_type == NODETYPE_ADDOP) {
+                    struct InstructionEntry * arg1 = curr -> children[0];
+                    struct InstructionEntry * arg2 = curr -> children[1];
+                    char * instruction;
+
+                    // Load argument literals and variable references
+                    instruction = genLoadChildNode(arg1, arg1 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    instruction = genLoadChildNode(arg2, arg2 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+
+                    // Insert general operation instruction
+                    insertInstruction(parent, createInstruction("add r2, r0, r1\n"), iterator);
+                    //insertInstruction(parent, createInstruction("add r2, r0, r1\n"), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_SUBOP) {
+                    struct InstructionEntry * arg1 = curr -> children[0];
+                    struct InstructionEntry * arg2 = curr -> children[1];
+                    char * instruction;
+
+                    // Load argument literals and variable references
+                    instruction = genLoadChildNode(arg1, arg1 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    instruction = genLoadChildNode(arg2, arg2 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+
+                    // Insert general operation instruction
+                    insertInstruction(parent, createInstruction("sub r2, r0, r1\n"), iterator);
+                    //insertInstruction(parent, createInstruction("sub r2, r0, r1\n"), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_MULOP) {
+                    struct InstructionEntry * arg1 = curr -> children[0];
+                    struct InstructionEntry * arg2 = curr -> children[1];
+                    char * instruction;
+
+                    // Load argument literals and variable references
+                    instruction = genLoadChildNode(arg1, arg1 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    instruction = genLoadChildNode(arg2, arg2 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+
+                    // Insert general operation instruction
+                    insertInstruction(parent, createInstruction("mul r2, r0, r1\n"), iterator);
+                    //insertInstruction(parent, createInstruction("sub r2, r0, r1\n"), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_DIVOP) {
+                    struct InstructionEntry * arg1 = curr -> children[0];
+                    struct InstructionEntry * arg2 = curr -> children[1];
+                    char * instruction;
+
+                    // Load argument literals and variable references
+                    instruction = genLoadChildNode(arg1, arg1 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    instruction = genLoadChildNode(arg2, arg2 -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+
+                    // Insert general operation instruction
+                    insertInstruction(parent, createInstruction("div r2, r0, r1\n"), iterator);
+                    //insertInstruction(parent, createInstruction("sub r2, r0, r1\n"), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_METHODCALL) {
+                    insertInstruction(parent, curr -> instructions[iterator], iterator);
+                } else if (curr -> node -> node_type == NODETYPE_PRINT || curr -> node -> node_type == NODETYPE_PRINTLN) {
+                    struct InstructionEntry * arg1 = curr -> children[0];
+                    char * instruction;
+
+                    insertInstruction(parent, curr -> instructions[iterator], iterator);
+                    iterator++;
+                    i++;
+
+                    instruction = genLoadChildNode(arg1, 1);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    i++;
+
+                    insertInstruction(parent, curr -> instructions[iterator], iterator);
+                }
+            } else {
+                insertInstruction(parent, curr -> instructions[iterator], iterator);
+            }
+        } else {
+            insertInstruction(parent, curr -> instructions[iterator], iterator);
+        }
+        
+        printf("%d %d\n", iterator, childInstructions);
+        iterator++;
+    }
+}
+
+char * genLoadChildNode(struct InstructionEntry * leaf, int reg) {
+    char instruction[40];
+    if (leaf -> response_type == RESPONSETYPE_LITERAL) sprintf(instruction, "ldr r%d, #%d\n", reg, leaf -> node -> data.value.int_value); 
+    else if (leaf -> response_type == RESPONSETYPE_LOCAL) sprintf(instruction, "ldr r%d, [offset]\n", reg); 
+    else if (leaf -> response_type == RESPONSETYPE_GLOBAL) sprintf(instruction, "ldr r%d, =[global]\n", reg);         
+    else sprintf(instruction, "ldr r%d, =[offset for temp]\n", reg); 
+    return createInstruction(instruction);
 }
 
 void genToFile(char * instructions[], int numInstructions, char * fileName) {
@@ -364,6 +647,7 @@ void createInstructionScope(struct ASTNode * node, struct ScopeEntry * scope) {
     child -> node = node;
     child -> num_instructions = 0;
     child -> num_children = 0;
+    child -> response_type = RESPONSETYPE_NULLABLE;
     if (child -> parent) child -> num_child = child -> parent -> num_children - 1;
     instructionHead = child;
 }

@@ -40,6 +40,9 @@ enum NodeType {
     NODETYPE_COMPOP,    // all comparison operations
     NODETYPE_EQOP,      // all equals comparison operations
     NODETYPE_ADDOP,     // separated for concatenation
+    NODETYPE_SUBOP,
+    NODETYPE_MULOP,
+    NODETYPE_DIVOP,
     NODETYPE_ADJOP,     // for all adjustment operations
     NODETYPE_TERMOP,    // other term operations
     NODETYPE_FACTOP,    // all factor operations
@@ -88,7 +91,6 @@ struct ASTNode {
     enum NodeType node_type;
     struct SemanticData data;
 };
-
 
 // Creates a new node with 0 children on the heap using `malloc()`.
 struct ASTNode* new_node(enum NodeType t, int line_no);

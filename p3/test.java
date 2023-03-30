@@ -10,6 +10,8 @@ class Test {
 
     }
     public static void main(String[] args) {
-        int test = 4 + 2 + 2;
+        int test = 4 + ((2 - dfsafds) * 4);
+        best();
+        System.out.print(test + 12);
     }
 }

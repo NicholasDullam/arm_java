@@ -165,7 +165,7 @@ void checkExp(struct ASTNode* exp) {
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
-    } else if (expType == NODETYPE_TERMOP) { // Check the remaining expression and term operations
+    } else if (expType == NODETYPE_SUBOP) { // Check the remaining expression and term operations
         struct ASTNode * nestedExp = exp -> children[0];
         struct ASTNode * term = exp -> children[1];
         checkExp(nestedExp);
@@ -233,7 +233,7 @@ void checkExp(struct ASTNode* exp) {
 
 void checkTerm(struct ASTNode* term) {
     enum NodeType termType = term -> node_type;
-    if (termType == NODETYPE_FACTOP) { // Check the term and factor operations
+    if (termType == NODETYPE_MULOP || termType == NODETYPE_DIVOP) { // Check the term and factor operations
         struct ASTNode * nestedTerm = term -> children[0];
         struct ASTNode * factor = term -> children[1];
         checkTerm(nestedTerm);

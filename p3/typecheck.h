@@ -10,8 +10,23 @@
 
 extern struct ScopeEntry * head;
 
-enum ScopeType { SCOPETYPE_GLOBAL, SCOPETYPE_METHOD, SCOPETYPE_LOCAL };
-enum EntryType { ENTRYTYPE_CLASS, ENTRYTYPE_METHOD, ENTRYTYPE_VAR };
+enum ScopeType { 
+    SCOPETYPE_GLOBAL, 
+    SCOPETYPE_METHOD, 
+    SCOPETYPE_LOCAL 
+};
+
+enum EntryType { 
+    ENTRYTYPE_CLASS, 
+    ENTRYTYPE_METHOD, 
+    ENTRYTYPE_VAR 
+};
+
+enum VarType {
+    VARTYPE_ARG,
+    VARTYPE_LOCAL,
+    VARTYPE_GLOBAL
+};
 
 /*
     Data structure to represent arguments and their data_types
@@ -38,6 +53,7 @@ struct SymbolTableEntry {
     int num_indices;                        // used for tracking array types of table entries
     int num_declarations;                   // used tracking method declarations and reporting method overloading at proper stage    
     enum EntryType type;
+    enum VarType var_type;
     enum DataType data_type;
     struct ArgEntry * args[MAX_ARGUMENTS];
 };

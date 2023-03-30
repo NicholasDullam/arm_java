@@ -9,9 +9,11 @@
 extern struct InstructionEntry * instructionHead;
 
 enum ResponseType {
-    RESPONSE_TYPE_GLOBAL,
-    RESPONSE_TYPE_LOCAL,
-    RESPONSE_TYPE_TEMP
+    RESPONSETYPE_GLOBAL,
+    RESPONSETYPE_LOCAL,
+    RESPONSETYPE_LITERAL,
+    RESPONSETYPE_TEMP,
+    RESPONSETYPE_NULLABLE
 };
 
 struct InstructionEntry {
@@ -57,6 +59,7 @@ void genMethodVars(struct ScopeEntry * scope, char * ids[], int count);
 void genLocalVars(struct ScopeEntry * scope, char * ids[], int count);
 void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * curr);
 void genToFile(char * instructions[], int numInstructions, char * fileName);
+char * genLoadChildNode(struct InstructionEntry * leaf, int register);
 
 /*
     General instruction helper functions

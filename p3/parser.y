@@ -308,7 +308,7 @@ Exp:
         // fill out other semantics
     }
     | Exp TOK_MINUS Term {
-        $$ = new_node(NODETYPE_TERMOP, yylineno);
+        $$ = new_node(NODETYPE_SUBOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);        
         // fill out other semantics
@@ -369,13 +369,13 @@ Exp:
 
 Term:
     Term TOK_MULT Factor {
-        $$ = new_node(NODETYPE_FACTOP, yylineno);
+        $$ = new_node(NODETYPE_MULOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Term TOK_DIV Factor {
-        $$ = new_node(NODETYPE_FACTOP, yylineno);
+        $$ = new_node(NODETYPE_DIVOP, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
