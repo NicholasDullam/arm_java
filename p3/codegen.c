@@ -11,6 +11,7 @@
 
 struct InstructionEntry * instructionHead = NULL;
 int tempCount = 0;
+int offset = 0;
 
 void genProgram(struct ASTNode * program, char * fileName) {
     struct ASTNode * class = program -> children[0];
@@ -56,7 +57,7 @@ void genMain(struct ASTNode * mainClass) {
     createInstructionScope(statementList, head);
     genMethodInit(statementList, "main");
     genStatementList(statementList);                                   
-    genMethodEnd(statementList);
+    genMethodEnd(statementList, "main");
     exitInstructionScope();
 }
 
@@ -113,10 +114,12 @@ void genStatement(struct ASTNode * statement) {
             addToInstructionEntry("ldr r0, =printString\n");
         }
 
+        // Create an instruction to load the expr into the second register
         char instruction[60];
         sprintf(instruction, "ldr r1, $t%d\n", instructionHead -> children[0] -> temp_id);
         addToInstructionEntry(instruction);        
         
+        // Create the branching instruction for the statement
         addToInstructionEntry("bl printf\n");
 
         instructionHead -> response_type = RESPONSETYPE_TEMP;
@@ -136,10 +139,12 @@ void genStatement(struct ASTNode * statement) {
             addToInstructionEntry("ldr r0, =printStringLn\n");
         }
 
+        // Create an instruction to load the expr into the second register
         char instruction[60];
         sprintf(instruction, "ldr r1, $t%d\n", instructionHead -> children[0] -> temp_id);
         addToInstructionEntry(instruction);
 
+        // Create the branching instruction for the statement
         addToInstructionEntry("bl printf\n");
 
         instructionHead -> response_type = RESPONSETYPE_TEMP;
@@ -149,8 +154,16 @@ void genStatement(struct ASTNode * statement) {
         genMethodCall(statement -> children[0]);
     } else if (statementType == NODETYPE_RETURN) {
         createInstructionScope(statement, head);
+
+        // Incorporate the nested expression instructions into the current instruction scope
         genExp(statement -> children[0]);
-        // insert temp inst here
+
+        // Create an instruction for loading the exp into the first register
+        struct InstructionEntry * arg = instructionHead -> children[0];
+        char instruction[20];
+        sprintf(instruction, "ldr r0, $t%d\n", arg -> temp_id);
+        addToInstructionEntry(instruction);
+
         exitInstructionScope();
     }
 }
@@ -158,7 +171,8 @@ void genStatement(struct ASTNode * statement) {
 void genStaticMethodDecl(struct ASTNode * staticMethodDecl) {
     createInstructionScope(staticMethodDecl, head); // method instruction scope
     genMethodInit(staticMethodDecl, staticMethodDecl -> data.value.string_value);
-    genMethodEnd(staticMethodDecl);
+    genStatementList(staticMethodDecl -> children[2]);
+    genMethodEnd(staticMethodDecl, staticMethodDecl -> data.value.string_value);
     exitInstructionScope(); // exit method instruction scope
 }
 
@@ -210,23 +224,36 @@ void genMethodCall(struct ASTNode * methodCall) {
         struct ASTNode * exp = expList -> children[0];
         struct ASTNode * expTail = expList -> children[1];
 
+        // Create the instructions for all argument expressions
         if (found -> num_args > 0) {
             while (exp) {
                 genExp(exp);
                 exp = expTail -> children[0];
-                if (exp) expTail = expTail -> children[1];
+                if (exp) expTail = expTail -> children[1];                
             }
         }
 
-        // add in handling before branching for method call
-        // including the return symbolic register and return address
+        // Create the instruction for loading the argument registers
+        for (int i = 0; i < instructionHead -> num_children; i++) {
+            struct InstructionEntry * arg = instructionHead -> children[i];
+            char instruction[20];
+            sprintf(instruction, "ldr r%d, $t%d\n", i, arg -> temp_id);
+            addToInstructionEntry(instruction);
+        }
 
-        // Create the instruction for the expression operation
+        // Create the instruction for branching terms
         char instruction[20];
         sprintf(instruction, "bl %s\n", methodCall -> data.value.string_value);
         addToInstructionEntry(instruction);
+        
+        // Create the instruction for loading r0 into a temp variable
+        sprintf(instruction, "str r0, $t%d\n", tempCount);
+        addToInstructionEntry(instruction);
 
+        // Set the return symbolic register
         instructionHead -> response_type = RESPONSETYPE_TEMP;
+        instructionHead -> temp_id = tempCount;
+        tempCount++;
 
         exitInstructionScope();
     }
@@ -234,7 +261,6 @@ void genMethodCall(struct ASTNode * methodCall) {
 
 void genExpDecl(struct ASTNode * expDecl) {
     if (expDecl -> node_type != NODETYPE_NULLABLE) {
-        printf("Expr Decl\n");
         genExp(expDecl -> children[0]);
     }
 }
@@ -290,7 +316,6 @@ void genExp(struct ASTNode * exp) {
 
         exitInstructionScope(); 
     } else if (expType == NODETYPE_TERM) {
-        printf("Term\n");
         genTerm(exp -> children[0]);
     }
 }
@@ -398,54 +423,64 @@ void genFactor(struct ASTNode * factor) {
 
 void genMethodInit(struct ASTNode * node, char * id) {
     struct ScopeEntry * methodScope = findMethodScope(id, head);
-    if (!methodScope) return;
-    head = methodScope -> children[0]; // navigate to the method local scope for symbol table context
     char branch[strlen(id) + 3];
     sprintf(branch, "%s:\n", id);
     createInstructionScope(node, methodScope); // create a config instruction scope
     addToInstructionEntry(branch);
     addToInstructionEntry("push {lr}\n"); 
-    
-    // generate arguments here (and track the local variables for the entire method for use in the offsets)
+
+    // Load arguments from the registers
+    struct SymbolTableEntry * foundMethod = searchGlobalScope(id);
+    for (int i = 0; i < foundMethod -> num_args; i++) {
+        // Search for the argumentw within the method and adjust the scope
+        head = methodScope;
+        struct SymbolTableEntry * foundArg = searchLocalScope(foundMethod -> args[i] -> id);
+        foundArg -> offset = offset;
+        offset += 4;
+
+        // Create the instruction
+        char instruction[40];
+        sprintf(instruction, "str r0, %s\n", foundMethod -> args[i] -> id); // replace with offsets assigned in local var prescreen
+        addToInstructionEntry(instruction);   
+    }
+
+    head = methodScope -> children[0]; // navigate to the method local scope for symbol table context
+    genLocalVars(head);
+
+    // Define offsets of local variables
+
+    instructionHead -> response_type = RESPONSETYPE_METHOD;
 
     exitInstructionScope(); // exit the config instruction scope
  }
 
-void genMethodEnd(struct ASTNode * node) {
+void genMethodEnd(struct ASTNode * node, char * id) {
     createInstructionScope(node, NULL); // method ending config instruction scope
     addToInstructionEntry("pop {pc}\n\n");
+
+    // Standardize the total offsets used for later use
+    struct SymbolTableEntry * foundMethod = searchGlobalScope(id);
+    foundMethod -> offset = offset;
+    offset = 0;
+
     exitInstructionScope(); // exit method ending config instruction scope
     exitInstructionScope(); // exit method instruction scope
     exitScope(); // exit local scope
     exitScope(); // exit method scope
 }
 
-void genMethodVars(struct ScopeEntry * scope, char * ids[], int count) {
-    if (scope == NULL) {
-        printf("Failed to find method scope\n");
-        return;
-    }
+void genLocalVars(struct ScopeEntry * scope) {
+    if (scope == NULL) return;
 
+    // Apply offset to all local variables
     for (int i = 0; i < scope -> num_entries; i++) {
-        ids[count] = scope -> symbol_table[i] -> id;
-        count++;
-    }
-} 
-
-void genLocalVars(struct ScopeEntry * scope, char * ids[], int count) {
-    if (scope == NULL) {
-        printf("Failed to find method scope\n");
-        return;
-    }
-
-    for (int i = 0; i < scope -> num_entries; i++) {
-        ids[count] = scope -> symbol_table[i] -> id;
-        count++;
+        scope -> symbol_table[i] -> offset = offset;
+        offset += 4;
     }
     
     // Check remaining scopes
     for (int i = 0; i < scope -> num_children; i++) {
-        genLocalVars(scope -> children[i], ids, count);
+        genLocalVars(scope -> children[i]);
     }
 }
 
@@ -551,15 +586,18 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     struct InstructionEntry * arg1 = curr -> children[0];
                     char * instruction;
 
+                    // Insert the first instruction (unchanged)
                     insertInstruction(parent, curr -> instructions[iterator], iterator);
                     iterator++;
                     i++;
 
+                    // Load argument literals and variable references
                     instruction = genLoadChildNode(arg1, 1);
                     insertInstruction(parent, instruction, iterator);
                     iterator++;
                     i++;
 
+                    // Insert the third instruction (unchanged)
                     insertInstruction(parent, curr -> instructions[iterator], iterator);
                 }
             } else {
@@ -569,7 +607,6 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
             insertInstruction(parent, curr -> instructions[iterator], iterator);
         }
         
-        printf("%d %d\n", iterator, childInstructions);
         iterator++;
     }
 }

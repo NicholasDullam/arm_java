@@ -49,6 +49,7 @@ struct ArgEntry {
 struct SymbolTableEntry {
     char * id;
     int length;                             // used to represent the length of an array datatype
+    int offset;
     int num_args;                           // used to represent the length of the arguments array
     int num_indices;                        // used for tracking array types of table entries
     int num_declarations;                   // used tracking method declarations and reporting method overloading at proper stage    

@@ -9,6 +9,7 @@
 extern struct InstructionEntry * instructionHead;
 
 enum ResponseType {
+    RESPONSETYPE_METHOD,
     RESPONSETYPE_GLOBAL,
     RESPONSETYPE_LOCAL,
     RESPONSETYPE_LITERAL,
@@ -54,9 +55,8 @@ void genFactor(struct ASTNode * factor);
 */
 
 void genMethodInit(struct ASTNode * node, char * id);
-void genMethodEnd(struct ASTNode * node);
-void genMethodVars(struct ScopeEntry * scope, char * ids[], int count);
-void genLocalVars(struct ScopeEntry * scope, char * ids[], int count);
+void genMethodEnd(struct ASTNode * node, char * id);
+void genLocalVars(struct ScopeEntry * scope);
 void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * curr);
 void genToFile(char * instructions[], int numInstructions, char * fileName);
 char * genLoadChildNode(struct InstructionEntry * leaf, int register);

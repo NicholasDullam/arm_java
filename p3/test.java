@@ -6,12 +6,13 @@ class Test {
 
     }
 
-    public static String best() {
-
+    public static int best(int fdjsalf) {
+        int test = 4 + fdjsalf;
+        return test;
     }
     public static void main(String[] args) {
         int test = 4 + ((2 - dfsafds) * 4);
-        best();
+        best(test);
         System.out.print(test + 12);
     }
 }
