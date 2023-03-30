@@ -17,6 +17,11 @@ enum ResponseType {
     RESPONSETYPE_NULLABLE
 };
 
+/*
+    Creates a scoped structure for instruction priority
+    and alignment after coalescing
+*/
+
 struct InstructionEntry {
     char * instructions[MAX_INSTRUCTIONS];
     struct ScopeEntry * scope;
@@ -25,6 +30,7 @@ struct InstructionEntry {
     struct InstructionEntry * parent;
     enum ResponseType response_type;
     char * id;
+    int offset;
     int temp_id;
     int num_child;
     int num_children;
