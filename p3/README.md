@@ -10,6 +10,8 @@ adjust the left value assignment to just include the name of the variable (assig
 
 grab command line arguments by using the index value * 4 + base_offset for the argument
 
+for main method add instruction that adds and subtracts the argc value * 4 (maybe minus 1 since files are included)
+
 make sure to handle unary operators
 
 then should be done!
