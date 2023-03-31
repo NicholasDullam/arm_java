@@ -423,22 +423,47 @@ void genFactor(struct ASTNode * factor) {
         exitInstructionScope();
     } else if (factorType == NODETYPE_LEFTVALUE) {
         struct ASTNode * leftValue = factor -> children[0];
-        struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValue -> data.value.string_value);
-        createInstructionScope(factor, head);
 
-        // Create the instruction for the temporary variable reference
-        char instruction[40];
-        sprintf(instruction, "mov $t%d, %s\n", tempCount, leftValue -> data.value.string_value); // replace with offsets assigned in local var prescreen
-        addToInstructionEntry(instruction);   
+        if (leftValue -> node_type == NODETYPE_LEFTVALUE) {
+            struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValue -> data.value.string_value);
+            createInstructionScope(factor, head);
 
-        // Provide the metadata for later instruction parsing
-        instructionHead -> temp_id = tempCount;
-        instructionHead -> id = leftValue -> data.value.string_value;
-        if (foundEntry -> var_type == VARTYPE_LOCAL || foundEntry -> var_type == VARTYPE_ARG) instructionHead -> response_type = RESPONSETYPE_LOCAL;
-        else if (foundEntry -> var_type == VARTYPE_GLOBAL) instructionHead -> response_type = RESPONSETYPE_GLOBAL;
-        tempCount++;
+            // Create the instruction for the temporary variable reference
+            char instruction[40];
+            sprintf(instruction, "mov $t%d, %s\n", tempCount, leftValue -> data.value.string_value); // replace with offsets assigned in local var prescreen
+            addToInstructionEntry(instruction);   
 
-        exitInstructionScope();
+            // Provide the metadata for later instruction parsing
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> id = leftValue -> data.value.string_value;
+            if (foundEntry -> var_type == VARTYPE_LOCAL || foundEntry -> var_type == VARTYPE_ARG) instructionHead -> response_type = RESPONSETYPE_LOCAL;
+            else if (foundEntry -> var_type == VARTYPE_GLOBAL) instructionHead -> response_type = RESPONSETYPE_GLOBAL;
+            tempCount++;
+
+            exitInstructionScope();
+        } else {
+            struct ASTNode * index = leftValue -> children[0];
+            struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValue -> data.value.string_value);
+
+            createInstructionScope(factor, head);
+            
+            genExp(index -> children[0]);
+
+            // Create the instruction for the temporary variable reference
+            char instruction[40];
+            sprintf(instruction, "mov $t%d, %s\n", tempCount, leftValue -> data.value.string_value); // replace with offsets assigned in local var prescreen
+            addToInstructionEntry(instruction);   
+
+            // Provide the metadata for later instruction parsing
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> id = leftValue -> data.value.string_value;
+            instructionHead -> response_type = RESPONSETYPE_TEMP;
+            instructionHead -> offset = offset;
+            offset += 4;
+            tempCount++;
+
+            exitInstructionScope();
+        }
     } else if (factorType == NODETYPE_METHODCALL) {
         genMethodCall(factor -> children[0]);
     } else if (factorType == NODETYPE_EXP) {
@@ -462,19 +487,21 @@ void genMethodInit(struct ASTNode * node, char * id) {
     addToInstructionEntry(branch);
     addToInstructionEntry("push {lr}\n"); 
 
-    // Load arguments from the registers
+    // Load arguments from the registers (for non-main methods)
     struct SymbolTableEntry * foundMethod = searchGlobalScope(id);
-    for (int i = 0; i < foundMethod -> num_args; i++) {
-        // Search for the argumentw within the method and adjust the scope
-        head = methodScope;
-        struct SymbolTableEntry * foundArg = searchLocalScope(foundMethod -> args[i] -> id);
-        foundArg -> offset = offset;
-        offset += 4;
+    if (strcmp(id, "main") != 0) {
+        for (int i = 0; i < foundMethod -> num_args; i++) {
+            // Search for the argumentw within the method and adjust the scope
+            head = methodScope;
+            struct SymbolTableEntry * foundArg = searchLocalScope(foundMethod -> args[i] -> id);
+            foundArg -> offset = offset;
+            offset += 4;
 
-        // Create the instruction
-        char instruction[40];
-        sprintf(instruction, "str r0, %s\n", foundMethod -> args[i] -> id); // replace with offsets assigned in local var prescreen
-        addToInstructionEntry(instruction);   
+            // Create the instruction
+            char instruction[40];
+            sprintf(instruction, "str r0, %s\n", foundMethod -> args[i] -> id); // replace with offsets assigned in local var prescreen
+            addToInstructionEntry(instruction);   
+        }
     }
 
     head = methodScope -> children[0]; // navigate to the method local scope for symbol table context
@@ -526,21 +553,41 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
         struct InstructionEntry * config1 = curr -> children[0];
         struct InstructionEntry * config2 = curr -> children[curr -> num_children - 1];
 
-        // Insert allocation after pushing return reference
-        char instruction[50];
-        sprintf(instruction, "sub sp, sp, #%d\n", foundMethod -> offset);
-        insertInstruction(curr, createInstruction(instruction), 2);
-        memset(instruction, 0, strlen(instruction));
-
-        for (int i = 0; i < foundMethod -> num_args; i++) {
-            sprintf(instruction, "str r%d, [sp, #%d]\n", i, 4 * i);
-            curr -> instructions[i + 3] = createInstruction(instruction);
+        if (strcmp(curr -> id, "main") != 0) {
+            // Insert allocation after pushing return reference
+            char instruction[50];
+            sprintf(instruction, "sub sp, sp, #%d\n", foundMethod -> offset);
+            insertInstruction(curr, createInstruction(instruction), 2);
             memset(instruction, 0, strlen(instruction));
-        }
 
-        // Insert deallocation at the last config
-        sprintf(instruction, "add sp, sp, #%d\n", foundMethod -> offset);
-        insertInstruction(curr, createInstruction(instruction), curr -> num_instructions - 1);
+            for (int i = 0; i < foundMethod -> num_args; i++) {
+                sprintf(instruction, "str r%d, [sp, #%d]\n", i, 4 * i);
+                curr -> instructions[i + 3] = createInstruction(instruction);
+                memset(instruction, 0, strlen(instruction));
+            }
+
+            // Insert deallocation at the last config
+            sprintf(instruction, "add sp, sp, #%d\n", foundMethod -> offset);
+            insertInstruction(curr, createInstruction(instruction), curr -> num_instructions - 1);
+        } else {
+            // Insert allocation after pushing return reference
+            char instruction[100];
+            sprintf(instruction, "mov r3, #4\n");
+            insertInstruction(curr, createInstruction(instruction), 2);
+            memset(instruction, 0, strlen(instruction));
+
+            sprintf(instruction, "mul r2, r0, r3\nadd r2, r2, #%d\nsub sp, sp, r2\n", foundMethod -> offset + 4);
+            insertInstruction(curr, createInstruction(instruction), 3);
+            memset(instruction, 0, strlen(instruction));
+
+            sprintf(instruction, "str r0, [sp, #%d]\nstr r1, [sp, #%d]\n", foundMethod -> offset, foundMethod -> offset + 4);
+            insertInstruction(curr, createInstruction(instruction), 4);
+            memset(instruction, 0, strlen(instruction));
+
+            // Insert deallocation at the last config
+            sprintf(instruction, "ldr r0, [sp, #%d]\nmov r1, #4\nmul r2, r0, r1\nadd r2, r2, #%d\nadd sp, sp, r2\n", foundMethod -> offset, foundMethod -> offset + 4);
+            insertInstruction(curr, createInstruction(instruction), curr -> num_instructions - 1);        
+        }
     }
 
     // Grab the sum of the child instruction entries to exclude re-evaluation
@@ -713,6 +760,22 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     char * instruction;
                     instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
                     insertInstruction(parent, instruction, iterator);
+                } else if (curr -> node -> node_type == NODETYPE_LEFTVALUE) {
+                    head = curr -> scope;
+                    struct SymbolTableEntry * found = searchGlobalScope(curr -> id);
+                    struct ScopeEntry * foundScope = nearestMethodScope();
+                    struct SymbolTableEntry * foundMethod = searchGlobalScope(foundScope -> id);
+                    printf("Checking here\n");
+                    
+                    char * instruction;
+                    instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+
+                    char storeInstruction[100];
+                    sprintf(storeInstruction, "add r0, r0, #1\nmov r1, #4\nmul r2, r0, r1\nldr r0, [sp, #%d]\nldr r0, [r0, r2]\nstr r0, [sp, #%d]\n", foundMethod -> offset + 4, curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 }
             } else {
                 insertInstruction(parent, curr -> instructions[iterator], iterator);
