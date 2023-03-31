@@ -1976,7 +1976,7 @@ yyreduce:
   case 59: /* Factor: TOK_PLUS Factor  */
 #line 411 "parser.y"
                       {
-        (yyval.node) = new_node(NODETYPE_ADJOP, yylineno);
+        (yyval.node) = new_node(NODETYPE_PLUSOP, yylineno);
         add_child((yyval.node), (yyvsp[0].node));
         // fill out other semantics
     }
@@ -1986,7 +1986,7 @@ yyreduce:
   case 60: /* Factor: TOK_MINUS Factor  */
 #line 416 "parser.y"
                        {
-        (yyval.node) = new_node(NODETYPE_ADJOP, yylineno);
+        (yyval.node) = new_node(NODETYPE_MINUSOP, yylineno);
         add_child((yyval.node), (yyvsp[0].node));
         // fill out other semantics
     }

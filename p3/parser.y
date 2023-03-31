@@ -409,12 +409,12 @@ Factor:
         // fill out other semantics
     }
     | TOK_PLUS Factor {
-        $$ = new_node(NODETYPE_ADJOP, yylineno);
+        $$ = new_node(NODETYPE_PLUSOP, yylineno);
         add_child($$, $2);
         // fill out other semantics
     }
     | TOK_MINUS Factor {
-        $$ = new_node(NODETYPE_ADJOP, yylineno);
+        $$ = new_node(NODETYPE_MINUSOP, yylineno);
         add_child($$, $2);
         // fill out other semantics
     }

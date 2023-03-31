@@ -468,6 +468,40 @@ void genFactor(struct ASTNode * factor) {
         genMethodCall(factor -> children[0]);
     } else if (factorType == NODETYPE_EXP) {
         genExp(factor -> children[0]);
+    } else if (factorType == NODETYPE_PLUSOP) {
+        createInstructionScope(factor, head);
+
+        genFactor(factor -> children[0]);
+
+        // Create the instruction for the temporary variable reference
+        char instruction[40];
+        sprintf(instruction, "ldr $t%d, +$%d\n", tempCount, instructionHead -> children[0] -> temp_id); // replace with offsets assigned in local var prescreen
+        addToInstructionEntry(instruction);   
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> offset = offset;
+        offset += 4;
+        tempCount++;
+
+        exitInstructionScope();
+    } else if (factorType == NODETYPE_MINUSOP) {
+        createInstructionScope(factor, head);
+
+        genFactor(factor -> children[0]);
+
+        // Create the instruction for the temporary variable reference
+        char instruction[40];
+        sprintf(instruction, "ldr $t%d, -$%d\n", tempCount, instructionHead -> children[0] -> temp_id); // replace with offsets assigned in local var prescreen
+        addToInstructionEntry(instruction);   
+
+        instructionHead -> response_type = RESPONSETYPE_TEMP;
+        instructionHead -> temp_id = tempCount;
+        instructionHead -> offset = offset;
+        offset += 4;
+        tempCount++;
+
+        exitInstructionScope();
     }
 }
 
@@ -775,6 +809,26 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
 
                     char storeInstruction[100];
                     sprintf(storeInstruction, "add r0, r0, #1\nmov r1, #4\nmul r2, r0, r1\nldr r0, [sp, #%d]\nldr r0, [r0, r2]\nstr r0, [sp, #%d]\n", foundMethod -> offset + 4, curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_PLUSOP) {
+                    char * instruction;
+                    instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    
+                    char storeInstruction[100];
+                    sprintf(storeInstruction, "rsbpl r0, r0, #0\nstr r0, [sp, #%d]\n", curr -> offset);
+                    insertInstruction(parent, createInstruction(storeInstruction), iterator);
+                } else if (curr -> node -> node_type == NODETYPE_MINUSOP) {
+                    char * instruction;
+                    instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
+                    insertInstruction(parent, instruction, iterator);
+                    iterator++;
+                    curr -> num_instructions++;
+                    
+                    char storeInstruction[100];
+                    sprintf(storeInstruction, "neg r0, r0\nstr r0, [sp, #%d]\n", curr -> offset);
                     insertInstruction(parent, createInstruction(storeInstruction), iterator);
                 }
             } else {

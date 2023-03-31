@@ -44,6 +44,8 @@ enum NodeType {
     NODETYPE_MULOP,
     NODETYPE_DIVOP,
     NODETYPE_ADJOP,     // for all adjustment operations
+    NODETYPE_PLUSOP,
+    NODETYPE_MINUSOP,
     NODETYPE_TERMOP,    // other term operations
     NODETYPE_FACTOP,    // all factor operations
     NODETYPE_TERM,      // for all terms

@@ -282,7 +282,7 @@ void checkFactor(struct ASTNode* factor) {
             reportTypeViolation(factor -> data.line_no);
             factor -> data.type = DATATYPE_UNDEFINED;
         }
-    } else if (factorType == NODETYPE_ADJOP) { // Check the adjustment operations
+    } else if (factorType == NODETYPE_PLUSOP || factorType == NODETYPE_MINUSOP) { // Check the adjustment operations
         struct ASTNode * nestedFactor = factor -> children[0];
         checkFactor(nestedFactor);
         if (nestedFactor -> data.type == DATATYPE_UNDEFINED) {
