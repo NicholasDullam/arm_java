@@ -102,7 +102,7 @@ void genStatement(struct ASTNode * statement) {
         
         // Create the instruction for the variable declaration
         char instruction[60];
-        sprintf(instruction, "str $t%d, %s @reconfigure to work with the rest\n", tempCount, varDecl -> data.value.string_value);
+        sprintf(instruction, "str $t%d, %s\n", tempCount, varDecl -> data.value.string_value);
         addToInstructionEntry(instruction);
 
         instructionHead -> response_type = RESPONSETYPE_TEMP;
@@ -846,20 +846,20 @@ char * genLoadChildNode(struct InstructionEntry * leaf, int reg) {
     char instruction[100];
     
     if (leaf -> response_type == RESPONSETYPE_LITERAL) {
-        sprintf(instruction, "mov r%d, #%d @ literal declaration\n", reg, leaf -> node -> data.value.int_value); 
+        sprintf(instruction, "mov r%d, #%d\n", reg, leaf -> node -> data.value.int_value); 
     } else if (leaf -> response_type == RESPONSETYPE_LOCAL) {
         head = leaf -> scope;
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
-        sprintf(instruction, "ldr r%d, [sp, #%d] @ local reference\n", reg, found -> offset); 
+        sprintf(instruction, "ldr r%d, [sp, #%d]\n", reg, found -> offset); 
     } else if (leaf -> response_type == RESPONSETYPE_GLOBAL) {
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
         if (found -> data_type == DATATYPE_INT) {
-            sprintf(instruction, "ldr r%d, =%s @ global reference\nldr r%d, [r%d, #0]\n", reg, leaf -> id, reg, reg);    
+            sprintf(instruction, "ldr r%d, =%s\nldr r%d, [r%d, #0]\n", reg, leaf -> id, reg, reg);    
         } else {
-            sprintf(instruction, "ldr r%d, =%s @ global reference\n", reg, leaf -> id);    
+            sprintf(instruction, "ldr r%d, =%s\n", reg, leaf -> id);    
         }
     } else {
-        sprintf(instruction, "ldr r%d, [sp, #%d] @ temp reference\n", reg, leaf -> offset);
+        sprintf(instruction, "ldr r%d, [sp, #%d]\n", reg, leaf -> offset);
     } 
     
     return createInstruction(instruction);
