@@ -387,7 +387,7 @@ void genTerm(struct ASTNode * term) {
 
         // Create the instruction for the expression operation
         char instruction[20];
-        sprintf(instruction, "mul $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
+        sprintf(instruction, "sdiv $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
         addToInstructionEntry(instruction);
         
         // Provide the metadata for later instruction parsing
@@ -698,7 +698,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     curr -> num_instructions++;
 
                     // Insert general operation instruction
-                    insertInstruction(parent, createInstruction("div r2, r0, r1\n"), iterator);
+                    insertInstruction(parent, createInstruction("sdiv r2, r0, r1\n"), iterator);
                     iterator++;
                     curr -> num_instructions++;
 
