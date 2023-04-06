@@ -83,9 +83,9 @@ void checkVarDecl(struct ASTNode* varDecl) {
 
     // Check all expression declarations in the expression list
     while (expListType != NODETYPE_NULLABLE) {
-        expDecl = expList -> children[1];
+        expDecl = expList -> children[0];
         checkExpDecl(varDecl, expList, expDecl);
-        expList = expList -> children[2];
+        expList = expList -> children[1];
         expListType = expList -> node_type;
     }
 }
@@ -726,7 +726,7 @@ int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
 struct ScopeEntry * nearestMethodScope() {
     struct ScopeEntry* curr = head;
     while (curr && curr -> type != SCOPETYPE_METHOD) {
-        curr = head -> parent;
+        curr = curr -> parent;
     }
     return curr;
 }

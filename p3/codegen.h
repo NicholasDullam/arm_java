@@ -1,7 +1,8 @@
 #ifndef CODE_GEN_H
 #define CODE_GEN_H
 
-#define MAX_INSTRUCTIONS 10000
+#define MAX_INSTRUCTION_SIZE 250            // max instruction string length
+#define MAX_INSTRUCTIONS 1000               // max instructions for a given entry
 
 #include "node.h"
 #include "typecheck.h"
@@ -48,8 +49,8 @@ void genStaticMethodDeclList(struct ASTNode * staticMethodDeclList);
 void genStatementList(struct ASTNode * statementList);
 void genStatement(struct ASTNode * statement);
 void genStaticMethodDecl(struct ASTNode * staticMethodDecl);
-void genStaticVarDecl(struct ASTNode * staticVarDecl);
-void genVarDecl(struct ASTNode * varDecl);
+void genStaticVarDecl(struct ASTNode * staticVarDecl, struct ASTNode * expDecl, struct ASTNode * expList);
+void genVarDecl(struct ASTNode * varDecl, struct ASTNode * expDecl, struct ASTNode * expList);
 void genMethodCall(struct ASTNode * methodCall);
 void genExpDecl(struct ASTNode * expDecl);
 void genExp(struct ASTNode * exp);
