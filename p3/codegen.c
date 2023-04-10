@@ -941,7 +941,7 @@ char * genLoadChildNode(struct InstructionEntry * leaf, int reg) {
     char instruction[MAX_INSTRUCTION_SIZE];
     
     if (leaf -> response_type == RESPONSETYPE_LITERAL) {
-        sprintf(instruction, "mov r%d, #%d\n", reg, leaf -> node -> data.value.int_value); 
+        sprintf(instruction, "ldr r%d, =#%d\n", reg, leaf -> node -> data.value.int_value); 
     } else if (leaf -> response_type == RESPONSETYPE_LOCAL) {
         head = leaf -> scope;
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
