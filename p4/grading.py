@@ -12,11 +12,12 @@ def main(argv):
         if (argv[0] == "-c"):
             files = os.listdir(argv[1] + "/tests")
             for file in files:
-                if (".java" not in file): return
+                if (".java" not in file): continue
                 directory = argv[1] + "/tests/" + file
                 error = subprocess.run(["./codegen", directory], stderr=subprocess.PIPE).stderr.decode('utf-8')
                 if (error):
                     print(f"FAILED COMPILATION: {directory}")
+                    print(error)
                     continue
     else:
         files = os.listdir(argv[0] + "/tests"); score = 0; filesAssessed = 0
@@ -25,24 +26,30 @@ def main(argv):
             filesAssessed += 1
             directory = argv[0] + "/expected/" + file.replace(".s", ".out")
             with open(directory) as input:
-                error = subprocess.run(["gcc", "-o", "temp", argv[0] + "/tests/" + file], stderr=subprocess.PIPE) # change this to match the ARM assembler instruction
+                error = subprocess.run(["gcc", "-o", "temp", argv[0] + "/tests/" + file], stderr=subprocess.PIPE).stderr.decode('utf-8') # change this to match the ARM assembler instruction
                 if (error):
                     print(f"FAILED COMPILATION: {directory}")
+                    print(error)
                     continue
-                result = subprocess.run(["./temp", "1111"], stdout=subprocess.PIPE).stdout.decode('utf-8').splitlines()
-                temp = input.readline(); iterator = 0; diffFlag = False
+                result = subprocess.run(["./temp", "745"], stdout=subprocess.PIPE).stdout.decode('utf-8').splitlines()
+                temp = input.readline().replace('\n', ''); iterator = 0; diffFlag = False
                 while temp:
-                    if (temp != result[iterator]): 
+                    if (iterator >= len(result) or temp != result[iterator]): 
                         diffFlag = True
                         break
-                    temp = input.readline()
+                    temp = input.readline().replace('\n', '')
                     iterator += 1
 
                 if diffFlag:
                     print(f"FAIL: {directory} on line {iterator + 1}"),
                     print(f"\texpected: {temp}")
-                    print(f"\tgiven: {result[iterator]}")
+                    if (iterator >= len(result)):
+                        print(f"\tgiven: *empty*")
+                    else:
+                        print(f"\tgiven: {result[iterator]}")
                     continue
+                else:
+                    score += 100
         
         score = score / filesAssessed
         print("-----------------------")
