@@ -6,7 +6,6 @@ printString: .asciz "%s"
 
 .section .text
 .global main
-.global main
 .balign 4
 
 main:

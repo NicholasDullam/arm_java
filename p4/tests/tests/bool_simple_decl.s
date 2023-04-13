@@ -6,7 +6,6 @@ printString: .asciz "%s"
 
 .section .text
 .global main
-.global main
 .balign 4
 
 main:
@@ -27,7 +26,7 @@ str r0, [sp, #8]
 ldr r0, =printStringLn
 ldr r1, [sp, #8]
 bl printf
-ldr r0, =#1
+ldr r0, [sp, #0]
 str r0, [sp, #0]
 ldr r0, [sp, #12]
 mov r1, #4

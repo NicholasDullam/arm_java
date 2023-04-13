@@ -6,13 +6,12 @@ printString: .asciz "%s"
 
 .section .text
 .global main
-.global main
 .balign 4
 
 get_string:
 push {lr}
 sub sp, sp, #0
-ldr r0, =#-1829741360
+ldr r0, =STR_0
 add sp, sp, #0
 pop {pc}
 

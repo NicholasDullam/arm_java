@@ -11,6 +11,7 @@
 
 struct InstructionEntry * instructionHead = NULL;
 int tempCount = 0;
+int literalCount = 0;
 int offset = 0;
 struct ScopeEntry * prevScope = NULL;
 
@@ -48,7 +49,8 @@ void genMain(struct ASTNode * mainClass) {
     exitInstructionScope();
     genStaticVarDeclList(staticVarDeclList); 
     createInstructionScope(staticVarDeclList, head);
-    addToInstructionEntry("\n.section .text\n");     
+    addToInstructionEntry("\n");     
+    addToInstructionEntry(".section .text\n");     
     addToInstructionEntry(".global main\n");     
     addToInstructionEntry(".balign 4\n\n");                            
     exitInstructionScope();
@@ -367,21 +369,25 @@ void genExp(struct ASTNode * exp) {
         genExp(nestedExp);
         genTerm(term);
         
-        // Define the arguments of the child scopes
-        int arg1 = instructionHead -> children[0] -> temp_id;
-        int arg2 = instructionHead -> children[1] -> temp_id;
+        if (exp -> data.type == DATATYPE_STR) {
 
-        // Create the instruction for the expression operation
-        char instruction[MAX_INSTRUCTION_SIZE];
-        sprintf(instruction, "add $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
-        addToInstructionEntry(instruction);
-        
-        // Provide the metadata for later instruction parsing
-        instructionHead -> response_type = RESPONSETYPE_TEMP;
-        instructionHead -> temp_id = tempCount;
-        instructionHead -> offset = offset;
-        offset += 4;
-        tempCount++;
+        } else if (exp -> data.type == DATATYPE_INT) {
+            // Define the arguments of the child scopes
+            int arg1 = instructionHead -> children[0] -> temp_id;
+            int arg2 = instructionHead -> children[1] -> temp_id;
+
+            // Create the instruction for the expression operation
+            char instruction[MAX_INSTRUCTION_SIZE];
+            sprintf(instruction, "add $t%d, $t%d, $t%d\n", tempCount, arg1, arg2);
+            addToInstructionEntry(instruction);
+            
+            // Provide the metadata for later instruction parsing
+            instructionHead -> response_type = RESPONSETYPE_TEMP;
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> offset = offset;
+            offset += 4;
+            tempCount++;
+        }
 
         exitInstructionScope();
     } else if (expType == NODETYPE_SUBOP) {
@@ -481,20 +487,36 @@ void genFactor(struct ASTNode * factor) {
     if (factorType == NODETYPE_LITERAL) {
         createInstructionScope(factor, head);
 
-        // Create the instruction for temporary literal
-        char instruction[MAX_INSTRUCTION_SIZE];
-        sprintf(instruction, "ldr $t%d, #%d\n", tempCount, factor -> data.value.int_value);
-        addToInstructionEntry(instruction);  
+        if (factor -> data.type == DATATYPE_STR) {
+            char stringName[MAX_INSTRUCTION_SIZE];
+            sprintf(stringName, "STR_%d", literalCount);
+            char * name = createInstruction(stringName);
 
-        // Provide metadata for later instruction parsing          
-        instructionHead -> temp_id = tempCount;
-        instructionHead -> response_type = RESPONSETYPE_LITERAL; // change if global variable
-        tempCount++;
+            // assign literal to the .data section
+
+            // Provide metadata for later instruction parsing      
+            instructionHead -> id = name;    
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> response_type = RESPONSETYPE_GLOBAL; // since we're saving the literal to the .data section make reference global
+            tempCount++;
+            literalCount++;
+        } else if (factor -> data.type == DATATYPE_INT) {
+            // Create the instruction for temporary literal
+            char instruction[MAX_INSTRUCTION_SIZE];
+            sprintf(instruction, "ldr $t%d, #%d\n", tempCount, factor -> data.value.int_value);
+            addToInstructionEntry(instruction);  
+
+            // Provide metadata for later instruction parsing          
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> response_type = RESPONSETYPE_LITERAL; // change if global variable
+            tempCount++;
+        } else if (factor -> data.type == DATATYPE_BOOLEAN) {
+
+        }
 
         exitInstructionScope();
     } else if (factorType == NODETYPE_LEFTVALUE) {
         struct ASTNode * leftValue = factor -> children[0];
-
         if (leftValue -> node_type == NODETYPE_LEFTVALUE) {
             struct SymbolTableEntry * foundEntry = searchGlobalScope(leftValue -> data.value.string_value);
             createInstructionScope(factor, head);
@@ -930,6 +952,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                 insertInstruction(parent, curr -> instructions[iterator], iterator);
             }
         } else {
+            printf("%d // %s", iterator, curr -> instructions[iterator]);
             insertInstruction(parent, curr -> instructions[iterator], iterator);
         }
         
@@ -941,21 +964,35 @@ char * genLoadChildNode(struct InstructionEntry * leaf, int reg) {
     char instruction[MAX_INSTRUCTION_SIZE];
     
     if (leaf -> response_type == RESPONSETYPE_LITERAL) {
-        sprintf(instruction, "ldr r%d, =#%d\n", reg, leaf -> node -> data.value.int_value); 
+        if (leaf -> node -> data.type == DATATYPE_INT) {
+            sprintf(instruction, "ldr r%d, =#%d\n", reg, leaf -> node -> data.value.int_value); 
+        } else if (leaf -> node -> data.type == DATATYPE_BOOLEAN) {
+            // to be handled
+        }
     } else if (leaf -> response_type == RESPONSETYPE_LOCAL) {
         head = leaf -> scope;
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
-        sprintf(instruction, "ldr r%d, [sp, #%d]\n", reg, found -> offset); 
+        if (found -> data_type == DATATYPE_STR) {
+            // to be handled
+        } else if (found -> data_type == DATATYPE_INT) {
+            sprintf(instruction, "ldr r%d, [sp, #%d]\n", reg, found -> offset); 
+        } else if (found -> data_type == DATATYPE_BOOLEAN) {
+            // to be handled
+        }
     } else if (leaf -> response_type == RESPONSETYPE_GLOBAL) {
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
-        if (found -> data_type == DATATYPE_INT) {
+        if (!found) { // for string literals (treated as globals)
+            sprintf(instruction, "ldr r%d, =%s\n", reg, leaf -> id);    
+        } else if (found -> data_type == DATATYPE_INT) {
             sprintf(instruction, "ldr r%d, =%s\nldr r%d, [r%d, #0]\n", reg, leaf -> id, reg, reg);    
-        } else if (found -> data_type == DATATYPE_UNDEFINED) {
+        } else if (found -> data_type == DATATYPE_BOOLEAN) { // for integer globals
+            // to be handled
+        } else if (found -> data_type == DATATYPE_UNDEFINED) { // for uninitialized variables
             sprintf(instruction, "ldr r%d, =%s\nldr r%d, [r%d]\n", reg, leaf -> id, reg, reg);    
-        } else {
+        } else { // for string globals
             sprintf(instruction, "ldr r%d, =%s\n", reg, leaf -> id);    
         }
-    } else {
+    } else if (leaf -> response_type == RESPONSETYPE_TEMP){
         sprintf(instruction, "ldr r%d, [sp, #%d]\n", reg, leaf -> offset);
     } 
     

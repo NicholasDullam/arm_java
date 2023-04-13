@@ -6,13 +6,12 @@ printString: .asciz "%s"
 
 .section .text
 .global main
-.global main
 .balign 4
 
 get_bool:
 push {lr}
 sub sp, sp, #0
-ldr r0, =#0
+ldr r0, [sp, #0]
 add sp, sp, #0
 pop {pc}
 
