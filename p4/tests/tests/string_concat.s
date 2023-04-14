@@ -3,6 +3,8 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
+STR_0: .asciz "Hello"
+STR_1: .asciz " world"
 
 .section .text
 .global main
@@ -29,7 +31,6 @@ bl printf
 ldr r0, =STR_0
 str r0, [sp, #0]
 ldr r0, =printStringLn
-ldr r1, [sp, #0]
 bl printf
 ldr r0, [sp, #8]
 mov r1, #4

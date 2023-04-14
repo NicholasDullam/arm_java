@@ -322,49 +322,49 @@ Exp:
         // fill out other semantics
     }
     | Exp TOK_AND Exp {
-        $$ = new_node(NODETYPE_BINOP, yylineno);
+        $$ = new_node(NODETYPE_AND, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_OR Exp {
-        $$ = new_node(NODETYPE_BINOP, yylineno);
+        $$ = new_node(NODETYPE_OR, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_LESS Exp {
-        $$ = new_node(NODETYPE_COMPOP, yylineno);
+        $$ = new_node(NODETYPE_COMPLESS, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_GREAT Exp {
-        $$ = new_node(NODETYPE_COMPOP, yylineno);
+        $$ = new_node(NODETYPE_COMPGREAT, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_LEQ Exp {
-        $$ = new_node(NODETYPE_COMPOP, yylineno);
+        $$ = new_node(NODETYPE_COMPLEQ, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_GREQ Exp {
-        $$ = new_node(NODETYPE_COMPOP, yylineno);
+        $$ = new_node(NODETYPE_COMPGREQ, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_EQ Exp {
-        $$ = new_node(NODETYPE_EQOP, yylineno);
+        $$ = new_node(NODETYPE_COMPEQ, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics
     }
     | Exp TOK_NEQ Exp {
-        $$ = new_node(NODETYPE_EQOP, yylineno);
+        $$ = new_node(NODETYPE_COMPNEQ, yylineno);
         add_child($$, $1);
         add_child($$, $3);
         // fill out other semantics

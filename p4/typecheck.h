@@ -72,6 +72,7 @@ struct ScopeEntry {
     int num_indices;                        // this will be used as a utility for checking return type
     int num_children;
     int num_entries;
+    int depth;
     enum ScopeType type;
     struct ScopeEntry * parent;
     struct ScopeEntry * children[MAX_SCOPED_CHILDREN];
@@ -92,6 +93,7 @@ struct ScopeEntry * findMethodScope(char * id, struct ScopeEntry * scope);
 void createScope(enum ScopeType type);
 void createMethodScope(char * id, enum DataType data_type, int num_indices);
 int addChildScope(struct ScopeEntry* parent, struct ScopeEntry * child);
+void digScope(struct ScopeEntry* prevScope);
 int exitScope();
 
 struct ScopeEntry * nearestMethodScope();

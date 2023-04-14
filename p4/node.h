@@ -36,9 +36,17 @@ enum NodeType {
     NODETYPE_STATEMENTLIST,
 
     NODETYPE_BINOP,     // all binary operations
+    NODETYPE_AND,
+    NODETYPE_OR,
     NODETYPE_NOT,       // for bin op of not
     NODETYPE_COMPOP,    // all comparison operations
-    NODETYPE_EQOP,      // all equals comparison operations
+    NODETYPE_COMPGREAT,
+    NODETYPE_COMPLESS,
+    NODETYPE_COMPGREQ,
+    NODETYPE_COMPLEQ,
+    NODETYPE_COMPEQ,      // all equals comparison operations
+    NODETYPE_COMPNEQ,
+
     NODETYPE_ADDOP,     // separated for concatenation
     NODETYPE_SUBOP,
     NODETYPE_MULOP,

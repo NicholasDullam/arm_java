@@ -3,6 +3,8 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
+STR_0: .asciz "not printed"
+STR_1: .asciz "skduf"
 
 .section .text
 .global main
@@ -28,6 +30,16 @@ ldr r1, [sp, #4]
 bl printf
 ldr r0, =#6
 str r0, [sp, #0]
+beq ELSE_0
+ldr r0, =printStringLn
+ldr r1, =STR_0
+bl printf
+b ENDIF_0
+ELSE_0:
+ldr r0, =printStringLn
+ldr r1, =STR_1
+bl printf
+ENDIF_0:
 ldr r0, [sp, #8]
 mov r1, #4
 mul r2, r0, r1

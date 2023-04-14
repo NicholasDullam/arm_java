@@ -3,6 +3,7 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
+STR_0: .asciz "vneil"
 
 .section .text
 .global main
@@ -26,6 +27,13 @@ str r0, [sp, #0]
 ldr r0, =printStringLn
 ldr r1, [sp, #0]
 bl printf
+beq ELSE_0
+b ENDIF_0
+ELSE_0:
+ldr r0, =printStringLn
+ldr r1, =STR_0
+bl printf
+ENDIF_0:
 ldr r0, [sp, #4]
 mov r1, #4
 mul r2, r0, r1

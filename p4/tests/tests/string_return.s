@@ -3,6 +3,7 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
+STR_0: .asciz "cs352"
 
 .section .text
 .global main
@@ -38,7 +39,6 @@ str r0, [sp, #8]
 ldr r0, [sp, #8]
 str r0, [sp, #0]
 ldr r0, =printStringLn
-ldr r1, [sp, #0]
 bl printf
 ldr r0, [sp, #12]
 mov r1, #4

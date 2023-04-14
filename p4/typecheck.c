@@ -180,7 +180,7 @@ void checkExp(struct ASTNode* exp) {
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
-    } else if (expType == NODETYPE_COMPOP) { // Check the comparison operations
+    } else if (expType == NODETYPE_COMPGREAT || expType == NODETYPE_COMPLESS || expType == NODETYPE_COMPGREQ || expType == NODETYPE_COMPLEQ) { // Check the comparison operations
         struct ASTNode * nestedExp = exp -> children[0];
         struct ASTNode * nestedExp2 = exp -> children[1];
         checkExp(nestedExp);
@@ -194,7 +194,7 @@ void checkExp(struct ASTNode* exp) {
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
-    } else if (expType == NODETYPE_BINOP) { // Check the binary operations
+    } else if (expType == NODETYPE_AND || expType == NODETYPE_OR) { // Check the binary operations
         struct ASTNode * nestedExp = exp -> children[0];
         struct ASTNode * nestedExp2 = exp -> children[1];
         checkExp(nestedExp);
@@ -209,7 +209,7 @@ void checkExp(struct ASTNode* exp) {
             reportTypeViolation(exp -> data.line_no);
             exp -> data.type = DATATYPE_UNDEFINED;
         }
-    } else if (expType == NODETYPE_EQOP) {
+    } else if (expType == NODETYPE_COMPEQ || expType == NODETYPE_COMPNEQ) {
         struct ASTNode * nestedExp = exp -> children[0];
         struct ASTNode * nestedExp2 = exp -> children[1];
         checkExp(nestedExp);
@@ -684,6 +684,8 @@ void createScope(enum ScopeType type) {
     child -> type = type;
     child -> num_children = 0;
     child -> num_entries = 0;
+    if (child -> parent) child -> depth = child -> parent -> depth + 1;
+    else child -> depth = 0;
     head = child;
 }
 
@@ -698,6 +700,8 @@ void createMethodScope(char * id, enum DataType data_type, int num_indices) {
     child -> num_indices = num_indices;
     child -> num_children = 0;
     child -> num_entries = 0;
+    if (child -> parent) child -> depth = child -> parent -> depth + 1;
+    else child -> depth = 0;
     head = child;
 }
 
@@ -710,6 +714,20 @@ int exitScope() {
         return -1;
     }
 }
+
+// Dig to the first scope following the previous scope
+void digScope(struct ScopeEntry * prevScope) {
+    if (prevScope == NULL || prevScope -> depth != head -> depth + 1 || head -> num_children == 0) head = head -> children[0];
+    else {
+        int iterator = 0;
+        struct ScopeEntry * curr = head -> children[iterator];
+        while (prevScope != curr) {
+            iterator++;
+            curr = head -> children[iterator];
+        }
+        head = head -> children[iterator + 1];
+    }
+} 
 
 // As a child scope to the given parent scope
 int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
