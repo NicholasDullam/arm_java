@@ -31,7 +31,7 @@ def main(argv):
                     print(f"FAILED COMPILATION: {directory}")
                     print(error)
                     continue
-                result = subprocess.run(["./temp", "745"], stdout=subprocess.PIPE).stdout.decode('utf-8').splitlines()
+                result = subprocess.run(["./temp", "555"], stdout=subprocess.PIPE).stdout.decode('utf-8').splitlines()
                 temp = input.readline().replace('\n', ''); iterator = 0; diffFlag = False
                 while temp:
                     if (iterator >= len(result) or temp != result[iterator]): 
