@@ -3,6 +3,7 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
+S_0: .asciz "osibnd"
 
 .section .text
 .global main
@@ -26,7 +27,19 @@ str r0, [sp, #8]
 ldr r0, =printStringLn
 ldr r1, [sp, #8]
 bl printf
+ldr r0, =#1
 str r0, [sp, #0]
+ldr r1, =S_0
+cmp r0, #0
+beq IFFALSE_0
+ldr r0, =printStringLn
+ldr r1, =S_0
+bl printf
+b ENDIF_0
+IFFALSE_0:
+ldr r0, =#0
+str r0, [sp, #4]
+ENDIF_0:
 ldr r0, [sp, #12]
 mov r1, #4
 mul r2, r0, r1

@@ -16,7 +16,8 @@ add r2, r2, #24
 sub sp, sp, r2
 str r0, [sp, #20]
 str r1, [sp, #24]
-cmp $t0, #0
+ldr r0, =#0
+cmp r0, #0
 beq IFFALSE_0
 WLOOP_0:
 ldr r0, =#0
@@ -39,7 +40,8 @@ ldr r0, [sp, #8]
 ldr r1, [sp, #12]
 and r2, r1, r0
 str r2, [sp, #16]
-cmp $t9, #0
+ldr r0, [sp, #16]
+cmp r0, #0
 beq ENDWLOOP_0
 b WLOOP_0
 ENDWLOOP_0:

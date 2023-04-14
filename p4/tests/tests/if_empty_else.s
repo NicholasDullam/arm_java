@@ -17,6 +17,17 @@ sub sp, sp, r2
 str r0, [sp, #8]
 str r1, [sp, #12]
 ldr r0, =#0
+cmp r0, #0
+beq IFFALSE_0
+ldr r0, =#394
+str r0, [sp, #0]
+ldr r0, =printIntLn
+ldr r1, [sp, #0]
+bl printf
+b ENDIF_0
+IFFALSE_0:
+ENDIF_0:
+ldr r0, =#0
 add r0, r0, #1
 mov r1, #4
 mul r2, r0, r1

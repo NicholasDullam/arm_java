@@ -275,10 +275,6 @@ void genStatement(struct ASTNode * statement) {
 
         createInstructionScope(statement, head); // pre-expression config
 
-        // Evaluate the expression
-        genExp(statement -> children[0]);
-        struct InstructionEntry * expScope = instructionHead -> children[1];
-
         // Branch for the beginning of the loop
         char instruction[MAX_INSTRUCTION_SIZE];
         sprintf(instruction, "WLOOP_%d:\n", tempCount);
@@ -287,6 +283,10 @@ void genStatement(struct ASTNode * statement) {
         exitInstructionScope(); // exit pre-expression config
 
         createInstructionScope(statement, head); // expression handling for branching
+
+        // Evaluate the expression
+        genExp(statement -> children[0]);
+        struct InstructionEntry * expScope = instructionHead -> children[0];
 
         // Handle the expression value
         sprintf(instruction, "cmp $t%d, #0\n", expScope -> temp_id);
@@ -826,7 +826,7 @@ void genFactor(struct ASTNode * factor) {
 
         if (factor -> data.type == DATATYPE_STR) {
             char stringName[MAX_INSTRUCTION_SIZE];
-            sprintf(stringName, "STR_%d", literalCount);
+            sprintf(stringName, "S_%d", literalCount);
             char * name = createInstruction(stringName);
 
             // Assign literals to globals
@@ -1515,7 +1515,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     iterator++;
                     i++;
 
-                    insertInstruction(parent, curr -> instructions[iterator], iterator);   
+                    insertInstruction(parent, curr -> instructions[iterator - 1], iterator);   
                 } else if (curr -> node -> node_type == NODETYPE_WHILE) { // while loop handler
                     char * instruction;
                     instruction = genLoadChildNode(curr -> children[0], curr -> children[0] -> num_child);
@@ -1527,7 +1527,7 @@ void genTraversal(struct InstructionEntry * parent, struct InstructionEntry * cu
                     iterator++;
                     i++;
 
-                    insertInstruction(parent, curr -> instructions[iterator], iterator);      
+                    insertInstruction(parent, curr -> instructions[iterator - 1], iterator);      
                 }
             } else {
                 insertInstruction(parent, curr -> instructions[iterator], iterator);
@@ -1587,7 +1587,13 @@ void genToFile(char * instructions[], int numInstructions, char * fileName) {
     fileNameNoExt[strlen(fileName) - 4] = 's'; // add the assembly extensions
     fileNameNoExt[strlen(fileName) - 3] = '\0'; // add back the null terminator
     FILE * fp = fopen(fileNameNoExt, "w"); // create the new file pointer
-    for (int i = 0; i < numInstructions; i++) fwrite(instructions[i], 1, strlen(instructions[i]), fp);
+    for (int i = 0; i < numInstructions; i++) {
+        if (!instructions[i]) {
+            printf("Encountered empty instruction when writing to file %d out of %d \n", i + 1, numInstructions);
+            break;
+        }
+        fwrite(instructions[i], 1, strlen(instructions[i]), fp);
+    }
     fclose(fp); // ensure the file pointer is closed before unmount
 }
 

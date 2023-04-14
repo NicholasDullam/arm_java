@@ -10,29 +10,47 @@ printString: .asciz "%s"
 
 factorial:
 push {lr}
-sub sp, sp, #20
+sub sp, sp, #32
 str r0, [sp, #0]
 str r1, [sp, #4]
-beq ELSE_0
-ldr r0, [sp, #4]
-b ENDIF_0
-ELSE_0:
 ldr r0, [sp, #0]
 ldr r1, =#1
-sub r2, r0, r1
+mov r2, #0
+cmp r1, r0
+moveq r2, #1
 str r2, [sp, #8]
-ldr r0, [sp, #4]
-ldr r1, [sp, #0]
-mul r2, r0, r1
+ldr r0, [sp, #0]
+ldr r1, =#0
+mov r2, #0
+cmp r1, r0
+moveq r2, #1
 str r2, [sp, #12]
 ldr r0, [sp, #8]
 ldr r1, [sp, #12]
-bl factorial
-str r0, [sp, #16]
+orr r2, r1, r0
+str r2, [sp, #16]
 ldr r0, [sp, #16]
+cmp r0, #0
+beq IFFALSE_0
+ldr r0, [sp, #4]
+b ENDIF_0
+IFFALSE_0:
+ldr r0, [sp, #0]
+ldr r1, =#1
+sub r2, r0, r1
+str r2, [sp, #20]
+ldr r0, [sp, #4]
+ldr r1, [sp, #0]
+mul r2, r0, r1
+str r2, [sp, #24]
+ldr r0, [sp, #20]
+ldr r1, [sp, #24]
+bl factorial
+str r0, [sp, #28]
+ldr r0, [sp, #28]
 ENDIF_0:
 ldr r0, =#1
-add sp, sp, #20
+add sp, sp, #32
 pop {pc}
 
 main:

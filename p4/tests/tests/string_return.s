@@ -3,7 +3,7 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
-STR_0: .asciz "cs352"
+S_0: .asciz "cs352"
 
 .section .text
 .global main
@@ -12,7 +12,7 @@ STR_0: .asciz "cs352"
 get_string:
 push {lr}
 sub sp, sp, #0
-ldr r0, =STR_0
+ldr r0, =S_0
 add sp, sp, #0
 pop {pc}
 

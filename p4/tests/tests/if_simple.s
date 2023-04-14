@@ -3,8 +3,8 @@ printIntLn: .asciz "%d\n"
 printStringLn: .asciz "%s\n"
 printInt: .asciz "%d"
 printString: .asciz "%s"
-STR_0: .asciz "skjdbv"
-STR_1: .asciz "not printed"
+S_0: .asciz "skjdbv"
+S_1: .asciz "not printed"
 
 .section .text
 .global main
@@ -28,15 +28,16 @@ str r0, [sp, #0]
 ldr r0, =printStringLn
 ldr r1, [sp, #0]
 bl printf
-cmp $t2, #0
-beq ELSE_0
+ldr r0, =#1
+cmp r0, #0
+beq IFFALSE_0
 ldr r0, =printStringLn
-ldr r1, =STR_0
+ldr r1, =S_0
 bl printf
 b ENDIF_0
-ELSE_0:
+IFFALSE_0:
 ldr r0, =printStringLn
-ldr r1, =STR_1
+ldr r1, =S_1
 bl printf
 ENDIF_0:
 ldr r0, [sp, #4]
