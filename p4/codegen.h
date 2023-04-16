@@ -1,7 +1,7 @@
 #ifndef CODE_GEN_H
 #define CODE_GEN_H
 
-#define MAX_INSTRUCTION_SIZE 250            // max instruction string length
+#define MAX_INSTRUCTION_SIZE 500            // max instruction string length
 #define MAX_INSTRUCTIONS 1000               // max instructions for a given entry
 
 #include "node.h"

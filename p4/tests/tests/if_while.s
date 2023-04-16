@@ -22,16 +22,18 @@ add r0, r0, #1
 mov r1, #4
 mul r2, r0, r1
 ldr r0, [sp, #24]
-ldr r0, [r0, r2]
+add r0, r0, r2
 str r0, [sp, #4]
 ldr r0, =printStringLn
 ldr r1, [sp, #4]
+ldr r1, [r1]
 bl printf
 ldr r0, =#0
 cmp r0, #0
 beq IFFALSE_0
 ldr r0, =printStringLn
-ldr r1, =S_0
+adr r1, S_0
+ldr r1, [r1]
 bl printf
 b ENDIF_0
 IFFALSE_0:
@@ -41,7 +43,7 @@ WLOOP_0:
 ldr r0, [sp, #0]
 ldr r1, =#0
 mov r2, #0
-cmp r1, r0
+cmp r0, r1
 movgt r2, #1
 str r2, [sp, #8]
 ldr r0, [sp, #8]
@@ -63,6 +65,7 @@ str r0, [sp, #0]
 b WLOOP_0
 ENDWLOOP_0:
 ENDIF_0:
+ENDmain:
 ldr r0, [sp, #20]
 mov r1, #4
 mul r2, r0, r1

@@ -46,10 +46,11 @@ add r0, r0, #1
 mov r1, #4
 mul r2, r0, r1
 ldr r0, [sp, #36]
-ldr r0, [r0, r2]
+add r0, r0, r2
 str r0, [sp, #24]
 ldr r0, =printStringLn
 ldr r1, [sp, #24]
+ldr r1, [r1]
 bl printf
 b ENDIF_0
 IFFALSE_0:
@@ -58,12 +59,14 @@ add r0, r0, #1
 mov r1, #4
 mul r2, r0, r1
 ldr r0, [sp, #36]
-ldr r0, [r0, r2]
+add r0, r0, r2
 str r0, [sp, #28]
 ldr r0, =printStringLn
 ldr r1, [sp, #28]
+ldr r1, [r1]
 bl printf
 ENDIF_0:
+ENDmain:
 ldr r0, [sp, #32]
 mov r1, #4
 mul r2, r0, r1

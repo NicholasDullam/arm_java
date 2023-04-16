@@ -1,7 +1,7 @@
 #ifndef TYPE_CHECK_H
 #define TYPE_CHECK_H
 
-#define MAX_SCOPED_CHILDREN 100             // max child scopes for a given scope
+#define MAX_SCOPED_CHILDREN 200             // max child scopes for a given scope
 #define MAX_TABLE_SIZE 50                   // max symbol table size for a given scope
 #define MAX_ARGUMENTS 10                    // max arguments for a given method entry
 
