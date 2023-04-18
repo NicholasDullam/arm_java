@@ -53,6 +53,7 @@ struct SymbolTableEntry {
     int num_args;                           // used to represent the length of the arguments array
     int num_indices;                        // used for tracking array types of table entries
     int num_declarations;                   // used tracking method declarations and reporting method overloading at proper stage    
+    bool is_global;                         // used for tracking whether a string should be referenced globally or as a malloced variable
     enum EntryType type;
     enum VarType var_type;
     enum DataType data_type;
