@@ -50,8 +50,7 @@ beq IFFALSE_0
 b ENDIF_0
 IFFALSE_0:
 ldr r0, =printStringLn
-adr r1, S_0
-ldr r1, [r1]
+ldr r1, =S_0
 bl printf
 ENDIF_0:
 ENDmain:

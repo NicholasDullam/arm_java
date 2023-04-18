@@ -1679,10 +1679,10 @@ char * genLoadChildNode(struct InstructionEntry * leaf, int reg) {
         struct SymbolTableEntry * found = searchGlobalScope(leaf -> id);
         if (!found) { // for string literals (treated as globals)
             sprintf(instruction, "ldr r%d, =%s\n", reg, leaf -> id);    
-        } else if (found -> data_type == DATATYPE_INT) {
+        } else if (found -> data_type == DATATYPE_INT) { // for integer globals
             sprintf(instruction, "ldr r%d, =%s\nldr r%d, [r%d, #0]\n", reg, leaf -> id, reg, reg);    
-        } else if (found -> data_type == DATATYPE_BOOLEAN) { // for integer globals
-            // to be handled
+        } else if (found -> data_type == DATATYPE_BOOLEAN) { // for boolean globals 
+            sprintf(instruction, "ldr r%d, =%s\nldr r%d, [r%d, #0]\n", reg, leaf -> id, reg, reg);    
         } else if (found -> data_type == DATATYPE_UNDEFINED) { // for uninitialized variables
             sprintf(instruction, "ldr r%d, =%s\nldr r%d, [r%d]\n", reg, leaf -> id, reg, reg);    
         } else { // for string globals

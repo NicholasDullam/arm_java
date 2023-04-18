@@ -32,8 +32,7 @@ ldr r0, =#0
 cmp r0, #0
 beq IFFALSE_0
 ldr r0, =printStringLn
-adr r1, S_0
-ldr r1, [r1]
+ldr r1, =S_0
 bl printf
 b ENDIF_0
 IFFALSE_0:

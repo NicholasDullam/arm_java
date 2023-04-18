@@ -38,15 +38,13 @@ beq IFFALSE_1
 b ENDIF_1
 IFFALSE_1:
 ldr r0, =printStringLn
-adr r1, S_0
-ldr r1, [r1]
+ldr r1, =S_0
 bl printf
 ENDIF_1:
 b ENDIF_0
 IFFALSE_0:
 ldr r0, =printStringLn
-adr r1, S_1
-ldr r1, [r1]
+ldr r1, =S_1
 bl printf
 ENDIF_0:
 ENDmain:

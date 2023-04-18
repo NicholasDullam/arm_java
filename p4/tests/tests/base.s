@@ -23,20 +23,16 @@ str r1, [sp, #12]
 ldr r0, =#0
 cmp r0, #0
 beq IFFALSE_0
-adr r0, S_0
-ldr r0, [r0]
+ldr r0, =S_0
 bl strlen
 mov r1, r0
-adr r0, S_1
-ldr r0, [r0]
+ldr r0, =S_1
 bl strlen
 add r0, r0, r1
 bl malloc
 str r0, [sp, #0]
-adr r0, S_0
-ldr r0, [r0]
-adr r1, S_1
-ldr r1, [r1]
+ldr r0, =S_0
+ldr r1, =S_1
 bl strcat
 ldr r1, [sp, #0]
 str r0, [r1]
@@ -46,20 +42,16 @@ ldr r1, [r1]
 bl printf
 b ENDIF_0
 IFFALSE_0:
-adr r0, S_2
-ldr r0, [r0]
+ldr r0, =S_2
 bl strlen
 mov r1, r0
-adr r0, S_3
-ldr r0, [r0]
+ldr r0, =S_3
 bl strlen
 add r0, r0, r1
 bl malloc
 str r0, [sp, #4]
-adr r0, S_2
-ldr r0, [r0]
-adr r1, S_3
-ldr r1, [r1]
+ldr r0, =S_2
+ldr r1, =S_3
 bl strcat
 ldr r1, [sp, #4]
 str r0, [r1]

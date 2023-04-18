@@ -29,23 +29,18 @@ ldr r0, =printStringLn
 ldr r1, [sp, #4]
 ldr r1, [r1]
 bl printf
-adr r0, S_0
-ldr r0, [r0]
+ldr r0, =S_0
 str r0, [sp, #0]
 ldr r0, [sp, #0]
-ldr r0, [r0]
 bl strlen
 mov r1, r0
-adr r0, S_1
-ldr r0, [r0]
+ldr r0, =S_1
 bl strlen
 add r0, r0, r1
 bl malloc
 str r0, [sp, #8]
 ldr r0, [sp, #0]
-ldr r0, [r0]
-adr r1, S_1
-ldr r1, [r1]
+ldr r1, =S_1
 bl strcat
 ldr r1, [sp, #8]
 str r0, [r1]

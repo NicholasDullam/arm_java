@@ -12,8 +12,7 @@ S_0: .asciz "cs352"
 get_string:
 push {lr}
 sub sp, sp, #0
-adr r0, S_0
-ldr r0, [r0]
+ldr r0, =S_0
 b ENDget_string
 ENDget_string:
 add sp, sp, #0
@@ -45,7 +44,6 @@ ldr r0, [r0]
 str r0, [sp, #0]
 ldr r0, =printStringLn
 ldr r1, [sp, #0]
-ldr r1, [r1]
 bl printf
 ENDmain:
 ldr r0, [sp, #12]
