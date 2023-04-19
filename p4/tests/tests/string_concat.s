@@ -33,6 +33,7 @@ mov r1, r0
 ldr r0, =S_1
 bl strlen
 add r0, r0, r1
+add r0, r0, #1
 bl malloc
 str r0, [sp, #12]
 ldr r1, [sp, #4]

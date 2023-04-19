@@ -732,7 +732,7 @@ void digScope(struct ScopeEntry * prevScope) {
 // As a child scope to the given parent scope
 int addChildScope(struct ScopeEntry * parent, struct ScopeEntry * child) {
     if (!parent) return 0;
-    if (parent -> num_children < MAX_NUM_CHILDREN) {
+    if (parent -> num_children < MAX_SCOPED_CHILDREN) {
         parent -> children[parent -> num_children] = child;
         parent -> num_children++;
         return 0;

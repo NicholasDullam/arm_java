@@ -30,7 +30,6 @@ struct InstructionEntry {
     struct InstructionEntry * children[MAX_SCOPED_CHILDREN];
     struct InstructionEntry * parent;
     enum ResponseType response_type;
-    bool is_global;
     char * id;
     int offset;
     int temp_id;

@@ -582,7 +582,7 @@ void genExp(struct ASTNode * exp) {
             sprintf(instruction, "ldr r0, $t%d\n", arg2);
             addToInstructionEntry(instruction);
             addToInstructionEntry("bl strlen\n");
-            addToInstructionEntry("add r0, r0, r1\n");
+            addToInstructionEntry("add r0, r0, r1\nadd r0, r0, #1\n");
 
             // Allocate the memory for the resulting string
             addToInstructionEntry("bl malloc\n");
@@ -1133,7 +1133,7 @@ void genFactor(struct ASTNode * factor) {
 
             // Add additional entry for dynamic length and mult by 4 (left shift 2 bits)
             addToInstructionEntry("add r0, r0, #1\n");
-            addToInstructionEntry("lsl r1, r0, #2\n");
+            addToInstructionEntry("lsl r0, r0, #2\n");
 
             // Branch to malloc
             addToInstructionEntry("bl malloc\n");
@@ -1163,8 +1163,10 @@ void genFactor(struct ASTNode * factor) {
 
             genExp(exp2);
 
+            createInstructionScope(index, head);
+
             // Load base of array for loading the length
-            sprintf(instruction, "ldr r0, $t%d\n", baseAddressTemp);
+            sprintf(instruction, "ldr r0, $t%d\n", instructionHead -> parent -> children[0] -> temp_id);
             addToInstructionEntry(instruction);
 
             // Load the length from the register
@@ -1195,7 +1197,44 @@ void genFactor(struct ASTNode * factor) {
             sprintf(instruction, "str r0, $t%d\n", tempCount);
             addToInstructionEntry(instruction);
 
-            // handle looping malloc here
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> offset = offset;
+            instructionHead -> response_type = RESPONSETYPE_LITERAL;
+            tempCount++;
+            offset += 4;
+
+            exitInstructionScope(); // exit the loop config scope
+
+            // Load the length of the inner array
+            sprintf(instruction, "ldr r0, $%d", instructionHead -> children[0] -> temp_id);
+            addToInstructionEntry(instruction);
+
+            // Add additional entry for dynamic length and mult by 4 (left shift 2 bits)
+            addToInstructionEntry("add r0, r0, #1\n");
+            addToInstructionEntry("lsl r0, r0, #2\n");
+
+            // Branch to malloc
+            addToInstructionEntry("bl malloc\n");
+
+            // Save base address to temp variable
+            sprintf(instruction, "str r0, $t%d\n", tempCount); // change this to a new temporary name
+            addToInstructionEntry(instruction);
+
+            // Save the length of the array to the first index
+            sprintf(instruction, "ldr r1, $t%d\n", instructionHead -> children[0] -> temp_id);
+            addToInstructionEntry(instruction);
+            addToInstructionEntry("str r1, [r0]\n");
+
+            // Save the base address of the embedded array to the parent index
+            sprintf(instruction, "ldr r1, $t%d\n", instructionHead -> parent -> children[0] -> temp_id);
+            addToInstructionEntry(instruction);
+            addToInstructionEntry("ldr r2, [r0]\n"); // load the array length
+            sprintf(instruction, "ldr r3, $t%d\n", instructionHead -> children[1] -> temp_id); // load the iterator
+            addToInstructionEntry(instruction);
+            addToInstructionEntry("sub r3, r2, r3\n");
+            addToInstructionEntry("lsl r3, r3, #2\n");
+            addToInstructionEntry("add r3, r3, r1\n"); // get the new offset
+            addToInstructionEntry("str r0, [r1]\n"); // store the new malloc at the offset
 
             // Loop back to start
             sprintf(instruction, "b WLOOP%d\n", loopCount);
@@ -1206,7 +1245,11 @@ void genFactor(struct ASTNode * factor) {
             addToInstructionEntry(instruction);
 
             // add literal metadata here
+            instructionHead -> temp_id = tempCount;
+            instructionHead -> offset = offset;
             instructionHead -> response_type = RESPONSETYPE_LITERAL;
+            tempCount++;
+            offset += 4;
 
             exitInstructionScope();
 
