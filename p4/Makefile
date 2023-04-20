@@ -10,7 +10,7 @@ CFLAGS = -g
 -include $(patsubst, %.o, %.d, $(OBJS))
 
 codegen:	$(OBJS) $(LYOBJS)
-			gcc $(OBJS) $(LYOBJS) -o codegen
+			gcc $(OBJS) $(LYOBJS) -o codegen -lfl
 
 y.tab.c:	parser.y
 			bison -v -y -d -g -t --verbose parser.y
